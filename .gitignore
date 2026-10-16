@@ -1,0 +1,6 @@
+.gemini/
+.agents/
+.impeccable/
+node_modules/
+.DS_Store
+Thumbs.db
