@@ -1,0 +1,34 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    { "src": "/api/auth/login",                              "dest": "/api/auth/login.js" },
+    { "src": "/api/incidencias/([^/]+)/estado",              "dest": "/api/incidencias/[codigo]/estado.js" },
+    { "src": "/api/incidencias/([^/]+)/tecnico",             "dest": "/api/incidencias/[codigo]/tecnico.js" },
+    { "src": "/api/incidencias/([^/]+)/tags/([^/]+)",        "dest": "/api/incidencias/[codigo]/tags.js" },
+    { "src": "/api/incidencias/([^/]+)/tags",                "dest": "/api/incidencias/[codigo]/tags.js" },
+    { "src": "/api/incidencias/([^/]+)/evidencias/url",      "dest": "/api/incidencias/[codigo]/evidencias/url.js" },
+    { "src": "/api/incidencias/([^/]+)/evidencias",          "dest": "/api/incidencias/[codigo]/evidencias/index.js" },
+    { "src": "/api/incidencias/([^/]+)",                     "dest": "/api/incidencias/[codigo].js" },
+    { "src": "/api/incidencias",                             "dest": "/api/incidencias/index.js" },
+    { "src": "/api/busqueda",                                "dest": "/api/busqueda/index.js" },
+    { "src": "/api/analitica/edificios",                     "dest": "/api/analitica/edificios.js" },
+    { "src": "/api/analitica/tags",                          "dest": "/api/analitica/tags.js" },
+    { "src": "/api/evidencias/upload-token",                 "dest": "/api/evidencias/upload-token.js" },
+    { "src": "/(.*)",                                        "dest": "/public/$1" }
+  ],
+  "env": {
+    "MONGODB_URI": "@mongodb_uri",
+    "JWT_SECRET": "@jwt_secret",
+    "BLOB_READ_WRITE_TOKEN": "@blob_read_write_token"
+  }
+}
