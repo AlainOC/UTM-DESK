@@ -5,6 +5,7 @@
 
 import { USE_MOCK, EDIFICIOS } from './config.js';
 import { cleanPayload, normalizeTag } from './utils.js';
+import { getToken } from './auth.js';
 
 // ==========================================================================
 // ALMACÉN EN MEMORIA PARA MODO MOCK (Sin localStorage de datos de negocio)
@@ -170,6 +171,12 @@ export async function request(endpoint, options = {}) {
   const defaultHeaders = {
     'Accept': 'application/json'
   };
+
+  // Inyectar JWT si hay sesión activa
+  const token = getToken();
+  if (token) {
+    defaultHeaders['Authorization'] = `Bearer ${token}`;
+  }
 
   if (options.body && typeof options.body === 'string') {
     defaultHeaders['Content-Type'] = 'application/json';
