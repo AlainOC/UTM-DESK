@@ -8,6 +8,40 @@ import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { connectDB } from './lib/db.js';
+
+// ── Validaciones de arranque (RNF-07 y Fallback) ───────────────────────────
+if (!process.env.JWT_SECRET) {
+  console.error('\n❌ FATAL: Falta la variable de entorno obligatoria JWT_SECRET. El servidor se niega a arrancar sin JWT_SECRET.\n');
+  process.exit(1);
+}
+
+if (process.env.NODE_ENV === 'production' && process.env.USE_MEMORY_DB === 'true') {
+  console.error('\n❌ FATAL: USE_MEMORY_DB no está permitido en producción.\n');
+  process.exit(1);
+}
+
+if (!process.env.MONGODB_URI) {
+  if (process.env.USE_MEMORY_DB === 'true' && process.env.NODE_ENV !== 'production') {
+    console.warn('\n⚠️  Aviso: MONGODB_URI no configurado. Operando con fallback en memoria explícito (USE_MEMORY_DB=true en desarrollo).\n');
+  } else {
+    console.error('\n❌ FATAL: Falta la variable de entorno MONGODB_URI y USE_MEMORY_DB no está activado. El servidor se niega a arrancar sin base de datos.\n');
+    process.exit(1);
+  }
+}
+
+if (process.env.MONGODB_URI) {
+  try {
+    await connectDB();
+  } catch (err) {
+    if (process.env.USE_MEMORY_DB === 'true' && process.env.NODE_ENV !== 'production') {
+      console.warn('⚠️  Aviso: Falló la conexión con MongoDB. Usando fallback en memoria explícito (USE_MEMORY_DB=true):', err.message);
+    } else {
+      console.error('\n❌ FATAL: No se pudo conectar a MongoDB:', err.message, '\n');
+      process.exit(1);
+    }
+  }
+}
 
 // ── Rutas de la API ────────────────────────────────────────────────────────
 import authLogin from './api/auth/login.js';

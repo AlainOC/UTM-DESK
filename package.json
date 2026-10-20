@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "node --watch server.js",
     "start": "node server.js",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "indexes": "node scripts/indexes.js",
+    "test": "node tests/run_all.js"
   },
   "dependencies": {
     "@vercel/blob": "^0.27.0",
@@ -17,6 +19,7 @@
     "mongoose": "^8.5.2"
   },
   "devDependencies": {
+    "mongodb-memory-server": "^11.3.0",
     "nodemon": "^3.1.4"
   },
   "engines": {

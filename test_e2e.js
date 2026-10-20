@@ -4,12 +4,17 @@
  */
 import { spawn } from 'child_process';
 import http from 'http';
+import { MongoMemoryServer } from 'mongodb-memory-server';
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+import { configurarEsquemasEIndices } from './scripts/indexes.js';
 
 const PORT = 3055;
 process.env.PORT = String(PORT);
 process.env.JWT_SECRET = 'clave_secreta_super_segura_utm_desk_2026';
 
 let serverProcess;
+let mongodInstance;
 
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
@@ -33,9 +38,111 @@ async function request(path, options = {}) {
 }
 
 async function run() {
-  console.log('--- Iniciando Servidor de Pruebas ---');
+  console.log('--- Iniciando Entorno de Pruebas con MongoDB Real (WiredTiger/BSON) ---');
+  let mongoUri = process.env.MONGODB_URI_TEST;
+  if (!mongoUri) {
+    mongodInstance = await MongoMemoryServer.create();
+    mongoUri = mongodInstance.getUri();
+  }
+  console.log('🔌 Conectando a instancia de prueba:', mongoUri.split('@')[1] || mongoUri);
+
+  await mongoose.connect(mongoUri);
+  const db = mongoose.connection.db;
+  await configurarEsquemasEIndices(db);
+
+  // Sembrar cuentas de referencia y hashes bcrypt
+  const salt = await bcrypt.genSalt(10);
+  const hash = await bcrypt.hash('UtmDesk#2026', salt);
+  const cuentas = [
+    { nombre_completo: 'Carlos Ruiz', correo: 'carlos.ruiz@campus.example.edu', nivel_acceso: 'tecnico', estado: 'activo', password_hash: hash, fecha_registro: new Date() },
+    { nombre_completo: 'Roberto Canul', correo: 'roberto.canul@campus.example.edu', nivel_acceso: 'tecnico', estado: 'activo', password_hash: hash, fecha_registro: new Date() },
+    { nombre_completo: 'Pedro Kuk', correo: 'pedro.kuk@campus.example.edu', nivel_acceso: 'tecnico', estado: 'activo', password_hash: hash, fecha_registro: new Date() },
+    { nombre_completo: 'Elena Dzul', correo: 'elena.dzul@campus.example.edu', nivel_acceso: 'tecnico', estado: 'activo', password_hash: hash, fecha_registro: new Date() },
+    { nombre_completo: 'Ana Pech', correo: 'ana.pech@campus.example.edu', nivel_acceso: 'coordinador', estado: 'activo', password_hash: hash, fecha_registro: new Date() },
+    { nombre_completo: 'Jorge Herrera', correo: 'jorge.herrera@campus.example.edu', nivel_acceso: 'directivo', estado: 'activo', password_hash: hash, fecha_registro: new Date() },
+    { nombre_completo: 'Laura Méndez', correo: 'laura.mendez@campus.example.edu', nivel_acceso: 'reportante', tipo_reportante: 'docente', estado: 'activo', password_hash: hash, fecha_registro: new Date() },
+    { nombre_completo: 'Miguel Torres', correo: 'miguel.torres@campus.example.edu', nivel_acceso: 'reportante', tipo_reportante: 'docente', estado: 'activo', password_hash: hash, fecha_registro: new Date() },
+    { nombre_completo: 'Sofía Pool', correo: 'sofia.pool@campus.example.edu', nivel_acceso: 'reportante', tipo_reportante: 'docente', estado: 'activo', password_hash: hash, fecha_registro: new Date() },
+    { nombre_completo: 'Diego Cauich', correo: 'diego.cauich@campus.example.edu', nivel_acceso: 'reportante', tipo_reportante: 'docente', estado: 'activo', password_hash: hash, fecha_registro: new Date() },
+    { nombre_completo: 'Marisol Chan', correo: 'marisol.chan@campus.example.edu', nivel_acceso: 'reportante', tipo_reportante: 'administrativo', estado: 'activo', password_hash: hash, fecha_registro: new Date() },
+    { nombre_completo: 'Valeria Euán', correo: 'valeria.euan@campus.example.edu', nivel_acceso: 'reportante', tipo_reportante: 'estudiante', estado: 'activo', password_hash: hash, fecha_registro: new Date() },
+  ];
+  for (const c of cuentas) {
+    await db.collection('usuarios').updateOne({ correo: c.correo }, { $set: c }, { upsert: true });
+  }
+
+  // Sembrar incidencias de ejemplo
+  const incidencias = [
+    {
+      codigo: 'INC-2026-0042',
+      titulo: 'Switch de distribución sin conexión en Edificio A',
+      descripcion: 'Desde las 8:15 el switch del cuarto de comunicaciones no responde y los laboratorios del primer piso quedaron sin red.',
+      categoria: 'computo_redes',
+      prioridad: 'critica',
+      estado: 'resuelta',
+      reportante: { nombre: 'Laura Méndez', rol: 'docente', correo: 'laura.mendez@campus.example.edu' },
+      ubicacion: { edificio: 'Edificio A', piso: 1, espacio: 'Cuarto de comunicaciones' },
+      tecnico_asignado: { nombre: 'Carlos Ruiz', correo: 'carlos.ruiz@campus.example.edu' },
+      detalle_especifico: { tipo_falla: 'switch_sin_respuesta', equipo: 'Switch Cisco Catalyst 2960', direccion_ip: '10.10.4.2', vlan: 40, puerto_uplink: 'Gi0/48', equipos_afectados: 24 },
+      tags: ['switch', 'red', 'uplink', 'laboratorio'],
+      horas_invertidas: 3.5,
+      fecha_creacion: new Date('2026-10-05T14:15:00Z'),
+      fecha_resolucion: new Date('2026-10-05T18:30:00Z'),
+      historial_seguimiento: [
+        { fecha: new Date('2026-10-05T14:40:00Z'), autor: 'Carlos Ruiz', estado_nuevo: 'en_proceso', comentario: 'Se confirma uplink caído', horas: 0.5 },
+        { fecha: new Date('2026-10-05T18:30:00Z'), autor: 'Carlos Ruiz', estado_nuevo: 'resuelta', comentario: 'Restablecido enlace', horas: 3.0 },
+      ],
+      evidencias_adjuntas: [],
+    },
+    {
+      codigo: 'INC-2026-0043',
+      titulo: 'Filtración en el techo del aula B-204',
+      descripcion: 'Cada vez que llueve gotea agua sobre el área del pizarrón. El piso queda mojado y hay riesgo de resbalón y de corto en el proyector.',
+      categoria: 'infraestructura',
+      prioridad: 'alta',
+      estado: 'en_proceso',
+      reportante: { nombre: 'Miguel Torres', rol: 'docente', correo: 'miguel.torres@campus.example.edu' },
+      ubicacion: { edificio: 'Edificio B', piso: 2, espacio: 'Aula B-204' },
+      tecnico_asignado: { nombre: 'Roberto Canul', correo: 'roberto.canul@campus.example.edu' },
+      detalle_especifico: { tipo_dano: 'filtracion_techo', riesgo_seguridad: 'alto', insumos_requeridos: ['impermeabilizante'], requiere_contratista: false },
+      tags: ['filtracion', 'techo', 'aula'],
+      horas_invertidas: 1.5,
+      fecha_creacion: new Date('2026-10-07T09:00:00Z'),
+      historial_seguimiento: [{ fecha: new Date('2026-10-07T12:30:00Z'), autor: 'Roberto Canul', estado_nuevo: 'en_proceso', comentario: 'Inspección', horas: 1.5 }],
+      evidencias_adjuntas: [],
+    },
+    {
+      codigo: 'INC-2026-0044',
+      titulo: 'Error al asentar actas en el portal de calificaciones',
+      descripcion: 'Al guardar las calificaciones del grupo el portal muestra un error 500 y el acta no queda registrada.',
+      categoria: 'academico',
+      prioridad: 'media',
+      estado: 'abierta',
+      reportante: { nombre: 'Sofía Pool', rol: 'docente', correo: 'sofia.pool@campus.example.edu' },
+      ubicacion: { edificio: 'Edificio C', piso: 1, espacio: 'Sala de profesores' },
+      detalle_especifico: { plataforma: 'portal_calificaciones', codigo_curso: 'ISW-702', periodo_escolar: 'SEP-DIC 2026', estudiantes_impactados: 32, mensaje_error: 'Error 500' },
+      tags: ['portal', 'calificaciones'],
+      horas_invertidas: 0,
+      fecha_creacion: new Date('2026-10-12T16:20:00Z'),
+      historial_seguimiento: [],
+      evidencias_adjuntas: [],
+    },
+  ];
+  for (const inc of incidencias) {
+    await db.collection('incidencias_campus').updateOne({ codigo: inc.codigo }, { $set: inc }, { upsert: true });
+  }
+
+  await mongoose.disconnect();
+  console.log('✓ Base de prueba sembrada y desconectada del setup.');
+
+  console.log('--- Iniciando Servidor de Pruebas Express sobre MongoDB Real ---');
   serverProcess = spawn('node', ['server.js'], {
-    env: { ...process.env, PORT: String(PORT) },
+    env: {
+      ...process.env,
+      PORT: String(PORT),
+      MONGODB_URI: mongoUri,
+      JWT_SECRET: process.env.JWT_SECRET,
+    },
     stdio: 'pipe',
   });
 
@@ -453,11 +560,15 @@ async function run() {
     if (serverProcess) {
       serverProcess.kill('SIGTERM');
     }
+    if (mongodInstance) {
+      await mongodInstance.stop();
+    }
   }
 }
 
-run().catch(err => {
+run().catch(async (err) => {
   console.error('Error fatal:', err);
   if (serverProcess) serverProcess.kill();
+  if (mongodInstance) await mongodInstance.stop();
   process.exit(1);
 });
