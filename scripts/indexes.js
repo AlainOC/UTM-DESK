@@ -197,22 +197,38 @@ async function ensureIndex(coll, keys, options) {
   try {
     await coll.createIndex(keys, options);
   } catch (err) {
-    if (err.code === 85 || err.code === 86 || err.message?.includes('already exists with different options')) {
-      console.warn(`   ⚠️ Conflicto de opciones en índice '${options.name}'. Recreando con opciones actuales…`);
-      try {
-        await coll.dropIndex(options.name);
-      } catch {
-        // Si el nombre no coincide exactamente, buscarlo en coll.indexes()
-        const indexes = await coll.indexes();
-        const existing = indexes.find((idx) => {
-          const k1 = Object.keys(idx.key).join(',');
-          const k2 = Object.keys(keys).join(',');
-          return k1 === k2;
-        });
-        if (existing) {
-          await coll.dropIndex(existing.name);
+    if (err.code === 85 || err.code === 86 || err.message?.includes('already exists') || err.message?.includes('IndexOptionsConflict')) {
+      console.warn(`   ⚠️ Conflicto de opciones/nombre en índice '${options.name}'. Recreando…`);
+      const indexes = await coll.indexes();
+
+      // 1. Si el error menciona un nombre existente: "Index already exists with a different name: foo"
+      const matchName = err.message?.match(/different name:\s*(\S+)/);
+      if (matchName && matchName[1]) {
+        try { await coll.dropIndex(matchName[1]); } catch {}
+      }
+
+      // 2. Si es índice de texto, eliminar cualquier índice de texto previo
+      const isText = Object.values(keys).includes('text');
+      if (isText) {
+        const textIdx = indexes.find((idx) => idx.key._fts === 'text' || idx.name.includes('text'));
+        if (textIdx) {
+          try { await coll.dropIndex(textIdx.name); } catch {}
         }
       }
+
+      // 3. Intentar eliminar por el nombre destino
+      try { await coll.dropIndex(options.name); } catch {}
+
+      // 4. Buscar por coincidencia de campos
+      const existing = indexes.find((idx) => {
+        const k1 = Object.keys(idx.key).join(',');
+        const k2 = Object.keys(keys).join(',');
+        return k1 === k2;
+      });
+      if (existing) {
+        try { await coll.dropIndex(existing.name); } catch {}
+      }
+
       await coll.createIndex(keys, options);
     } else {
       throw err;
@@ -226,43 +242,45 @@ export async function configurarEsquemasEIndices(db) {
   const existingCollections = (await db.listCollections().toArray()).map((c) => c.name);
 
   // 1. Colección usuarios
-  if (!existingCollections.includes('usuarios')) {
+  try {
     await db.createCollection('usuarios', {
       validator: schemaUsuarios,
       validationLevel: 'strict',
       validationAction: 'error',
     });
     console.log('   ✓ Colección usuarios creada con validador estricto.');
-  } else {
-    try {
+  } catch (err) {
+    if (err.code === 48 || err.codeName === 'NamespaceExists') {
       await db.command({ collMod: 'usuarios', validator: schemaUsuarios, validationLevel: 'strict', validationAction: 'error' });
       console.log('   ✓ Validador de usuarios actualizado (collMod).');
-    } catch (e) {
-      console.warn('   ⚠️ Aviso en collMod usuarios:', e.message);
+    } else {
+      throw err;
     }
   }
 
   // 2. Colección incidencias_campus
-  if (!existingCollections.includes('incidencias_campus')) {
+  try {
     await db.createCollection('incidencias_campus', {
       validator: schemaIncidencias,
       validationLevel: 'strict',
       validationAction: 'error',
     });
     console.log('   ✓ Colección incidencias_campus creada con validador estricto.');
-  } else {
-    try {
+  } catch (err) {
+    if (err.code === 48 || err.codeName === 'NamespaceExists') {
       await db.command({ collMod: 'incidencias_campus', validator: schemaIncidencias, validationLevel: 'strict', validationAction: 'error' });
       console.log('   ✓ Validador de incidencias_campus actualizado (collMod).');
-    } catch (e) {
-      console.warn('   ⚠️ Aviso en collMod incidencias_campus:', e.message);
+    } else {
+      throw err;
     }
   }
 
   // 3. Colección auxiliar contadores
-  if (!existingCollections.includes('contadores')) {
+  try {
     await db.createCollection('contadores');
     console.log('   ✓ Colección contadores inicializada.');
+  } catch (err) {
+    if (err.code !== 48 && err.codeName !== 'NamespaceExists') throw err;
   }
 
   console.log('\n📌 2. Configurando índices requeridos (RNF-04)…');
