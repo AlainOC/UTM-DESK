@@ -1,38 +1,35 @@
 /**
  * GET /api/busqueda?q=texto
- * Búsqueda por texto indexado (MongoDB Atlas text index).
- * Nivel requerido: cualquier autenticado
+ * RF-20: Búsqueda por texto con $text y ordenado por textScore.
+ * Disponible para técnico, coordinador y directivo (reportante recibe 403).
  */
 import 'dotenv/config';
 import express from 'express';
 import { connectDB } from '../../lib/db.js';
-import { Incidencia } from '../../lib/models/Incidencia.js';
-import { requireAuth } from '../../lib/middleware/auth.js';
+import { requireAuth, requiereRol } from '../../lib/middleware/auth.js';
+import { buscarIncidencias } from '../../lib/services/incidenciaService.js';
 
 const app = express();
 app.use(express.json());
 
-app.get('/api/busqueda', requireAuth, async (req, res) => {
-  try {
-    await connectDB();
-    const { q } = req.query;
-    if (!q || q.trim().length < 2) {
-      return res.status(400).json({ error: 'Se requiere el parámetro ?q= con al menos 2 caracteres.' });
+app.get(
+  '/api/busqueda',
+  requireAuth,
+  requiereRol('tecnico', 'coordinador', 'directivo'),
+  async (req, res) => {
+    try {
+      await connectDB();
+      const { q } = req.query;
+      const resultados = await buscarIncidencias(q, req.user);
+      return res.status(200).json(resultados);
+    } catch (err) {
+      if (err.status) {
+        return res.status(err.status).json({ error: err.message });
+      }
+      console.error('[GET /api/busqueda]', err);
+      return res.status(500).json({ error: 'Error interno del servidor en la búsqueda.' });
     }
-
-    const resultados = await Incidencia.find(
-      { $text: { $search: q.trim() } },
-      { score: { $meta: 'textScore' } }
-    )
-      .sort({ score: { $meta: 'textScore' } })
-      .limit(50)
-      .lean();
-
-    return res.status(200).json(resultados);
-  } catch (err) {
-    console.error('[GET /api/busqueda]', err);
-    return res.status(500).json({ error: 'Error interno del servidor.' });
   }
-});
+);
 
 export default app;

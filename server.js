@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 
 // ── Rutas de la API ────────────────────────────────────────────────────────
 import authLogin from './api/auth/login.js';
+import authRegister from './api/auth/register.js';
 import incidenciasIndex from './api/incidencias/index.js';
 import incidenciaCodigo from './api/incidencias/[codigo].js';
 import incidenciaEstado from './api/incidencias/[codigo]/estado.js';
@@ -41,6 +42,7 @@ app.use((req, res, next) => {
 
 // ── Montar sub-aplicaciones de la API ─────────────────────────────────────
 app.use(authLogin);
+app.use(authRegister);
 app.use(incidenciasIndex);
 app.use(incidenciaCodigo);
 app.use(incidenciaEstado);

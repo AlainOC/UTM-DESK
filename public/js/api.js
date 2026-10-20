@@ -5,7 +5,14 @@
 
 import { USE_MOCK, EDIFICIOS } from './config.js';
 import { cleanPayload, normalizeTag } from './utils.js';
-import { getToken } from './auth.js';
+import { getToken, clearSession } from './auth.js';
+
+export async function registerUser(datos) {
+  return await request('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(datos)
+  });
+}
 
 // ==========================================================================
 // ALMACÉN EN MEMORIA PARA MODO MOCK (Sin localStorage de datos de negocio)
@@ -201,6 +208,12 @@ export async function request(endpoint, options = {}) {
     }
 
     if (!response.ok) {
+      if (response.status === 401) {
+        clearSession();
+        if (window.location.hash !== '#/login' && window.location.hash !== '#/registro-cuenta') {
+          window.location.hash = '#/login';
+        }
+      }
       const errorMsg = (data && typeof data === 'object' && data.error)
         ? data.error
         : (typeof data === 'string' && data ? data : `Error HTTP ${response.status}: ${response.statusText}`);
@@ -371,8 +384,8 @@ export async function patchEstado(codigo, { estado_nuevo, autor, comentario, hor
  * PATCH /api/incidencias/:codigo/tecnico
  * Asigna o cambia el técnico responsable de la incidencia.
  */
-export async function patchTecnico(codigo, { tecnico_asignado }) {
-  const payload = cleanPayload({ tecnico_asignado });
+export async function patchTecnico(codigo, { tecnico_asignado, autoasignar } = {}) {
+  const payload = cleanPayload({ tecnico_asignado, autoasignar });
 
   if (USE_MOCK) {
     await new Promise(r => setTimeout(r, 80));
@@ -530,9 +543,9 @@ export async function buscarIncidencias(q) {
     // Ordenar por relevancia simple: coincidencia en código o título tiene mayor peso
     matched.sort((a, b) => {
       const scoreA = ((a.codigo || '').toLowerCase().includes(queryText) ? 10 : 0) +
-                     ((a.titulo || '').toLowerCase().includes(queryText) ? 5 : 0);
+        ((a.titulo || '').toLowerCase().includes(queryText) ? 5 : 0);
       const scoreB = ((b.codigo || '').toLowerCase().includes(queryText) ? 10 : 0) +
-                     ((b.titulo || '').toLowerCase().includes(queryText) ? 5 : 0);
+        ((b.titulo || '').toLowerCase().includes(queryText) ? 5 : 0);
       return scoreB - scoreA;
     });
 

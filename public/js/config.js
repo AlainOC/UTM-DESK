@@ -3,8 +3,8 @@
  * Catálogos fijos y flags de ejecución del frontend.
  */
 
-// Si USE_MOCK es true, todas las llamadas en api.js se resuelven contra el almacén en memoria
-export const USE_MOCK = true;
+// Conectado directamente contra el backend real de la API
+export const USE_MOCK = false;
 
 // Lista de edificios del campus universitario
 export const EDIFICIOS = [

@@ -7,8 +7,10 @@
 import { createIncidencia } from '../api.js';
 import { EDIFICIOS, CATEGORIAS, PRIORIDADES, ROLES_REPORTANTE, NIVELES_RIESGO } from '../config.js';
 import { esc, isValidIPv4, isValidEmail, showToast } from '../utils.js';
+import { getUsuario } from '../auth.js';
 
 export async function renderRegistroView(container) {
+  const usuarioActual = getUsuario();
   // Estado local para chips de insumos en infraestructura
   let currentInsumos = [];
 
@@ -32,30 +34,19 @@ export async function renderRegistroView(container) {
         <!-- Bloque 1: Reportante y Ubicación -->
         <div class="col-12 col-lg-6">
           
-          <!-- Datos del Reportante -->
+          <!-- Datos del Reportante (Sesión Activa RF-05) -->
           <section class="panel-card mb-4" aria-label="Sección del reportante">
-            <h2 class="panel-card-title mb-3">1. Datos del Reportante</h2>
-            
-            <div class="mb-3">
-              <label for="rep-nombre" class="form-label-custom">Nombre Completo *</label>
-              <input type="text" id="rep-nombre" class="form-control-custom" placeholder="Ej. Dra. Sofía Alarcón" required>
-              <div class="field-error-msg d-none" id="err-rep-nombre">El nombre es obligatorio.</div>
-            </div>
-
-            <div class="row g-3 mb-3">
-              <div class="col-sm-6">
-                <label for="rep-rol" class="form-label-custom">Rol Universitario *</label>
-                <select id="rep-rol" class="form-select-custom" required>
-                  <option value="">Seleccionar rol...</option>
-                  ${Object.entries(ROLES_REPORTANTE).map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join('')}
-                </select>
-                <div class="field-error-msg d-none" id="err-rep-rol">Seleccione un rol válido.</div>
+            <h2 class="panel-card-title mb-3">1. Datos del Reportante (Sesión Activa)</h2>
+            <div class="p-3 rounded bg-subtle border">
+              <div class="d-flex align-items-center justify-content-between mb-1">
+                <span class="fw-bold fs-6">${esc(usuarioActual?.nombre_completo || usuarioActual?.nombre || 'Reportante')}</span>
+                <span class="badge-nivel badge-reportante">${esc(usuarioActual?.tipo_reportante || 'Reportante')}</span>
               </div>
-
-              <div class="col-sm-6">
-                <label for="rep-correo" class="form-label-custom">Correo Institucional *</label>
-                <input type="email" id="rep-correo" class="form-control-custom font-mono" placeholder="usuario@utm.edu.mx" required>
-                <div class="field-error-msg d-none" id="err-rep-correo">Ingrese un correo válido.</div>
+              <div class="font-mono text-muted" style="font-size:0.8rem;">
+                ${esc(usuarioActual?.correo || '')}
+              </div>
+              <div class="form-hint mt-2" style="font-size:0.75rem;">
+                Identidad institucional tomada automáticamente del token de sesión (RF-05).
               </div>
             </div>
           </section>
@@ -85,16 +76,6 @@ export async function renderRegistroView(container) {
               <label for="ubi-espacio" class="form-label-custom">Espacio / Aula / Laboratorio *</label>
               <input type="text" id="ubi-espacio" class="form-control-custom" placeholder="Ej. Aula B-204, Laboratorio L-1, Cubículo 12" required>
               <div class="field-error-msg d-none" id="err-ubi-espacio">Indique el espacio físico o aula.</div>
-            </div>
-          </section>
-
-          <!-- Técnico Asignado Inicial (Opcional) -->
-          <section class="panel-card mb-4" aria-label="Técnico preliminar">
-            <h2 class="panel-card-title mb-3">Asignación Preliminar (Opcional)</h2>
-            <div>
-              <label for="inc-tecnico" class="form-label-custom">Técnico Asignado</label>
-              <input type="text" id="inc-tecnico" class="form-control-custom" placeholder="Dejar en blanco si se despachará en triaje">
-              <div class="form-hint">Si se deja vacío, la incidencia quedará como "Sin asignar".</div>
             </div>
           </section>
 
@@ -386,16 +367,6 @@ export async function renderRegistroView(container) {
       }
     }
 
-    // Validar Reportante
-    const repNombre = container.querySelector('#rep-nombre').value.trim();
-    if (!repNombre) setFieldError('#rep-nombre', '#err-rep-nombre');
-
-    const repRol = container.querySelector('#rep-rol').value;
-    if (!repRol) setFieldError('#rep-rol', '#err-rep-rol');
-
-    const repCorreo = container.querySelector('#rep-correo').value.trim();
-    if (!repCorreo || !isValidEmail(repCorreo)) setFieldError('#rep-correo', '#err-rep-correo');
-
     // Validar Ubicación
     const ubiEdificio = container.querySelector('#ubi-edificio').value;
     if (!ubiEdificio) setFieldError('#ubi-edificio', '#err-ubi-edificio');
@@ -424,8 +395,6 @@ export async function renderRegistroView(container) {
 
     const incDescripcion = container.querySelector('#inc-descripcion').value.trim();
     if (!incDescripcion) setFieldError('#inc-descripcion', '#err-inc-descripcion');
-
-    const incTecnico = container.querySelector('#inc-tecnico').value.trim();
 
     // Validar Detalle Específico según Categoría elegida
     let detalleEspecifico = {};
@@ -515,16 +484,12 @@ export async function renderRegistroView(container) {
     }
 
     // Armar payload estrictamente limpio (cero nulls o cadenas vacías)
+    // Nota: El reportante lo toma el servidor directamente del token de sesión (RF-05).
     const payload = {
       titulo: incTitulo,
       descripcion: incDescripcion,
       categoria: incCategoria,
       prioridad: incPrioridad,
-      reportante: {
-        nombre: repNombre,
-        rol: repRol,
-        correo: repCorreo
-      },
       ubicacion: {
         edificio: ubiEdificio,
         espacio: ubiEspacio
@@ -534,9 +499,6 @@ export async function renderRegistroView(container) {
 
     if (ubiPiso !== undefined) {
       payload.ubicacion.piso = ubiPiso;
-    }
-    if (incTecnico) {
-      payload.tecnico_asignado = incTecnico;
     }
 
     // Deshabilitar botón durante el envío

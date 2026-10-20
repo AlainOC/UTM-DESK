@@ -258,7 +258,7 @@ export async function renderTableroView(container) {
             </div>
 
             <div class="d-flex justify-content-between align-items-center pt-2 border-top" style="font-size:0.775rem;">
-              <span class="text-muted">Despacho: <strong>${esc(inc.tecnico_asignado || 'Sin asignar')}</strong></span>
+              <span class="text-muted">Despacho: <strong>${esc(typeof inc.tecnico_asignado === 'object' && inc.tecnico_asignado ? inc.tecnico_asignado.nombre : (inc.tecnico_asignado || 'Sin asignar'))}</strong></span>
               <span class="font-mono text-muted">${formatDate(inc.fecha_creacion)}</span>
             </div>
           </article>
@@ -305,7 +305,7 @@ export async function renderTableroView(container) {
                 <td>${renderStatusBadge(inc.estado)}</td>
                 <td>
                   <span class="${inc.tecnico_asignado ? 'fw-medium' : 'text-danger fst-italic'}" style="font-size:0.825rem;">
-                    ${esc(inc.tecnico_asignado || 'Sin despacho')}
+                    ${esc(typeof inc.tecnico_asignado === 'object' && inc.tecnico_asignado ? inc.tecnico_asignado.nombre : (inc.tecnico_asignado || 'Sin despacho'))}
                   </span>
                 </td>
                 <td>

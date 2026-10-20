@@ -1,13 +1,13 @@
 /**
  * GET /api/analitica/tags
- * Ranking de las 10 etiquetas más recurrentes en incidencias resueltas.
- * Nivel requerido: coordinador+
+ * RF-22: Ranking de las 10 etiquetas más frecuentes en incidencias resueltas o cerradas.
+ * Nivel requerido: SOLO directivo (cualquier otro rol recibe 403).
  */
 import 'dotenv/config';
 import express from 'express';
-import { connectDB } from '../../../lib/db.js';
-import { Incidencia } from '../../../lib/models/Incidencia.js';
-import { requireAuth, requireNivel } from '../../../lib/middleware/auth.js';
+import { connectDB } from '../../lib/db.js';
+import { requireAuth, requiereRol } from '../../lib/middleware/auth.js';
+import { obtenerRankingTags } from '../../lib/services/incidenciaService.js';
 
 const app = express();
 app.use(express.json());
@@ -15,24 +15,18 @@ app.use(express.json());
 app.get(
   '/api/analitica/tags',
   requireAuth,
-  requireNivel('coordinador'),
+  requiereRol('directivo'),
   async (req, res) => {
     try {
       await connectDB();
-
-      const resultado = await Incidencia.aggregate([
-        { $match: { estado: { $in: ['resuelta', 'cerrada'] } } },
-        { $unwind: '$tags' },
-        { $group: { _id: '$tags', total: { $sum: 1 } } },
-        { $sort: { total: -1 } },
-        { $limit: 10 },
-        { $project: { _id: 0, tag: '$_id', total: 1 } },
-      ]);
-
+      const resultado = await obtenerRankingTags(req.user);
       return res.status(200).json(resultado);
     } catch (err) {
+      if (err.status) {
+        return res.status(err.status).json({ error: err.message });
+      }
       console.error('[GET /api/analitica/tags]', err);
-      return res.status(500).json({ error: 'Error interno del servidor.' });
+      return res.status(500).json({ error: 'Error interno del servidor en ranking de etiquetas.' });
     }
   }
 );

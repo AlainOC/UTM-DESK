@@ -13,6 +13,7 @@ import {
   addEvidencia,
   getEvidenciaUrl
 } from '../api.js';
+import { getUsuario } from '../auth.js';
 import { USE_MOCK, ESTADOS, NIVELES_RIESGO, ROLES_REPORTANTE } from '../config.js';
 import {
   esc,
@@ -51,6 +52,32 @@ export async function renderDetalleView(container, codigo) {
   }
 
   function renderContent(inc) {
+    const user = getUsuario() || {};
+    const userEmail = (user.correo || '').toLowerCase();
+    const userRole = user.nivel_acceso;
+
+    const isCerrada = inc.estado === 'cerrada';
+    const isResuelta = inc.estado === 'resuelta';
+    const reportanteEmail = (inc.reportante?.correo || '').toLowerCase();
+    const isOwner = Boolean(userEmail && reportanteEmail && userEmail === reportanteEmail);
+
+    const hasTecnico = Boolean(inc.tecnico_asignado && (typeof inc.tecnico_asignado === 'string' ? inc.tecnico_asignado : inc.tecnico_asignado.correo));
+    const tecNombre = typeof inc.tecnico_asignado === 'object' && inc.tecnico_asignado ? inc.tecnico_asignado.nombre : (inc.tecnico_asignado || null);
+    const tecCorreo = typeof inc.tecnico_asignado === 'object' && inc.tecnico_asignado ? inc.tecnico_asignado.correo : null;
+    const isAssignedTech = Boolean(userEmail && tecCorreo && userEmail === tecCorreo.toLowerCase());
+
+    const isCoordinador = userRole === 'coordinador';
+    const isTecnico = userRole === 'tecnico';
+    const isReportante = userRole === 'reportante';
+    const isDirectivo = userRole === 'directivo';
+
+    // Permisos de acción operativa según RF-11 a RF-19
+    const canAutoasignar = !isCerrada && !hasTecnico && (isTecnico || isCoordinador);
+    const canAsignarCoordinador = !isCerrada && isCoordinador;
+    const canUpdateEstado = !isCerrada && (isCoordinador || isAssignedTech);
+    const canManageTags = !isCerrada && (isCoordinador || isAssignedTech);
+    const canUploadEvidence = !isCerrada && ((isReportante && isOwner) || isAssignedTech);
+
     const ttlAviso = inc.fecha_resolucion
       ? `<div class="ttl-notice mb-4" role="status">
            <span aria-hidden="true">⏳</span>
@@ -187,92 +214,151 @@ export async function renderDetalleView(container, codigo) {
         <!-- Columna Derecha: Acciones Rápidas (Técnico, Estado, Tags, Evidencias) -->
         <div class="col-12 col-lg-5">
           
-          <!-- Asignación de Técnico (RF-09) -->
-          <section class="panel-card mb-4" aria-label="Asignar técnico">
-            <h2 class="panel-card-title mb-3">Técnico Asignado</h2>
-            <form id="form-tecnico" class="d-flex gap-2">
-              <input type="text" id="input-tecnico" class="form-control-custom" placeholder="Nombre del técnico responsable" value="${esc(inc.tecnico_asignado || '')}" required>
-              <button type="submit" id="btn-guardar-tecnico" class="btn-custom-primary text-nowrap">
-                Guardar
+          <!-- Asignación de Técnico (RF-13, RF-14) -->
+          <section class="panel-card mb-4" aria-label="Técnico responsable">
+            <h2 class="panel-card-title mb-3">Técnico Responsable</h2>
+            <div class="mb-3">
+              ${hasTecnico ? `
+                <div class="p-3 rounded bg-subtle border">
+                  <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="fw-bold">${esc(tecNombre)}</span>
+                    <span class="badge-nivel badge-tecnico">Especialista</span>
+                  </div>
+                  ${tecCorreo ? `<div class="font-mono text-muted" style="font-size:0.8rem;">${esc(tecCorreo)}</div>` : ''}
+                </div>
+              ` : `
+                <div class="p-3 rounded bg-subtle border border-warning text-warning-emphasis">
+                  ⚠ <strong>Sin técnico asignado</strong> (pendiente de despacho en mesa de ayuda).
+                </div>
+              `}
+            </div>
+
+            ${canAutoasignar ? `
+              <button type="button" id="btn-autoasignar" class="btn-custom-primary w-100">
+                ⚡ Autoasignarme este Ticket (RF-13)
               </button>
-            </form>
+            ` : ''}
+
+            ${canAsignarCoordinador ? `
+              <form id="form-tecnico" class="d-flex flex-column gap-2 ${canAutoasignar ? 'mt-3 pt-3 border-top' : ''}">
+                <label for="input-tecnico-correo" class="form-label-custom mb-0" style="font-size:0.8rem;">
+                  ${hasTecnico ? 'Reasignar a otro técnico (correo institucional):' : 'Asignar técnico institucional (correo):'}
+                </label>
+                <div class="d-flex gap-2">
+                  <input type="email" id="input-tecnico-correo" class="form-control-custom font-mono" placeholder="carlos.ruiz@campus.example.edu" required>
+                  <button type="submit" id="btn-guardar-tecnico" class="btn-custom-primary text-nowrap">
+                    ${hasTecnico ? 'Reasignar' : 'Asignar'}
+                  </button>
+                </div>
+                <div class="form-hint" style="font-size:0.75rem;">Debe ser un usuario activo con nivel 'tecnico' (RF-14).</div>
+              </form>
+            ` : ''}
           </section>
 
-          <!-- Cambio de Estado y Actualización de Bitácora (RF-08) -->
+          <!-- Cambio de Estado y Actualización de Bitácora (RF-11, RF-12, RF-15) -->
           <section class="panel-card mb-4" aria-label="Actualizar estado">
-            <h2 class="panel-card-title mb-3">Registrar Avance / Cambiar Estado</h2>
-            <form id="form-estado" class="d-flex flex-column gap-3">
-              <div>
-                <label for="select-nuevo-estado" class="form-label-custom">Nuevo Estado</label>
-                <select id="select-nuevo-estado" class="form-select-custom" required>
-                  ${Object.values(ESTADOS).map(e => `
-                    <option value="${esc(e.id)}" ${e.id === inc.estado ? 'selected' : ''}>${esc(e.label)}</option>
-                  `).join('')}
-                </select>
+            <h2 class="panel-card-title mb-3">Registrar Avance / Estado</h2>
+            ${isCerrada ? `
+              <div class="p-3 rounded bg-subtle text-muted text-center">
+                🔒 <strong>Incidencia Cerrada</strong>. Es un estado terminal y no admite transiciones (RF-15).
               </div>
+            ` : canUpdateEstado ? `
+              <form id="form-estado" class="d-flex flex-column gap-3">
+                <div>
+                  <label for="select-nuevo-estado" class="form-label-custom">Nuevo Estado *</label>
+                  <select id="select-nuevo-estado" class="form-select-custom" required>
+                    ${inc.estado === 'abierta' ? `
+                      <option value="en_proceso">En Proceso</option>
+                      <option value="en_espera">En Espera</option>
+                      <option value="resuelta">Resuelta</option>
+                    ` : inc.estado === 'en_proceso' ? `
+                      <option value="en_espera">En Espera</option>
+                      <option value="resuelta">Resuelta</option>
+                    ` : inc.estado === 'en_espera' ? `
+                      <option value="en_proceso">En Proceso</option>
+                      <option value="resuelta">Resuelta</option>
+                    ` : inc.estado === 'resuelta' && isCoordinador ? `
+                      <option value="cerrada">Cerrar Ticket Definitivamente (RF-15)</option>
+                      <option value="en_proceso">Reabrir Incidencia (RF-15)</option>
+                    ` : `
+                      <option value="${esc(inc.estado)}">${esc(ESTADOS[inc.estado]?.label || inc.estado)}</option>
+                    `}
+                  </select>
+                </div>
 
-              <div>
-                <label for="input-autor" class="form-label-custom">Autor del Registro</label>
-                <input type="text" id="input-autor" class="form-control-custom" placeholder="Tu nombre o cargo" required>
+                <div>
+                  <label for="input-horas" class="form-label-custom">Horas Invertidas en esta intervención</label>
+                  <input type="number" id="input-horas" class="form-control-custom font-mono" min="0" step="0.5" value="0.5" required>
+                  <div class="form-hint">Mínimo 0 h. Se acumulan al total de la incidencia (RF-11).</div>
+                </div>
+
+                <div>
+                  <label for="textarea-comentario" class="form-label-custom">Comentario Técnico / Justificación *</label>
+                  <textarea id="textarea-comentario" class="form-control-custom" rows="3" placeholder="Describe los hallazgos, diagnóstico o acciones realizadas..." required></textarea>
+                </div>
+
+                <button type="submit" id="btn-guardar-estado" class="btn-custom-primary w-100">
+                  Guardar Avance en Bitácora
+                </button>
+              </form>
+            ` : `
+              <div class="p-3 rounded bg-subtle text-muted" style="font-size:0.85rem;">
+                Estado actual: <strong>${esc(ESTADOS[inc.estado]?.label || inc.estado)}</strong>.
+                <div class="mt-1">${isResuelta ? 'Solo un coordinador puede cerrar o reabrir una incidencia resuelta.' : 'Solo el técnico asignado a este ticket o un coordinador pueden registrar avances de estado.'}</div>
               </div>
-
-              <div>
-                <label for="input-horas" class="form-label-custom">Horas Invertidas en esta intervención</label>
-                <input type="number" id="input-horas" class="form-control-custom font-mono" min="0" step="0.5" value="0.5" required>
-                <div class="form-hint">Mínimo 0 h, incrementos de 0.5 h. Se acumulan al total.</div>
-              </div>
-
-              <div>
-                <label for="textarea-comentario" class="form-label-custom">Comentario Técnico / Justificación</label>
-                <textarea id="textarea-comentario" class="form-control-custom" rows="3" placeholder="Describe los hallazgos, diagnóstico o acciones realizadas..." required></textarea>
-              </div>
-
-              <button type="submit" id="btn-guardar-estado" class="btn-custom-primary w-100">
-                Guardar Actualización
-              </button>
-            </form>
+            `}
           </section>
 
-          <!-- Gestión de Etiquetas / Tags (RF-13) -->
+          <!-- Gestión de Etiquetas / Tags (RF-18, RF-19) -->
           <section class="panel-card mb-4" aria-label="Etiquetas">
             <h2 class="panel-card-title mb-3">Etiquetas (Tags)</h2>
             <div class="chips-container mb-2" id="tags-chips-wrapper">
-              ${(inc.tags || []).map(t => `
+              ${(inc.tags || []).length === 0 && !canManageTags ? `
+                <span class="text-muted fst-italic" style="font-size:0.825rem;">Sin etiquetas asociadas.</span>
+              ` : (inc.tags || []).map(t => `
                 <span class="chip-item font-mono" data-tag="${esc(t)}">
                   #${esc(t)}
-                  <button type="button" class="chip-remove-btn btn-remove-tag" data-tag="${esc(t)}" title="Quitar etiqueta #${esc(t)}" aria-label="Quitar etiqueta ${esc(t)}">✕</button>
+                  ${canManageTags ? `
+                    <button type="button" class="chip-remove-btn btn-remove-tag" data-tag="${esc(t)}" title="Quitar etiqueta #${esc(t)}" aria-label="Quitar etiqueta ${esc(t)}">✕</button>
+                  ` : ''}
                 </span>
               `).join('')}
-              <input type="text" id="input-new-tag" class="chip-input font-mono" placeholder="+ Agregar etiqueta (Enter)">
+              ${canManageTags ? `
+                <input type="text" id="input-new-tag" class="chip-input font-mono" placeholder="+ Agregar etiqueta (Enter)">
+              ` : ''}
             </div>
-            <div class="form-hint">Escribe una etiqueta y presiona Enter para agregarla.</div>
+            ${canManageTags ? `
+              <div class="form-hint">Escribe una etiqueta y presiona Enter para agregarla (RF-18).</div>
+            ` : ''}
           </section>
 
-          <!-- Evidencias Adjuntas (RF-11 / RF-12) -->
+          <!-- Evidencias Adjuntas (RF-16, RF-17) -->
           <section class="panel-card mb-4" aria-label="Evidencias adjuntas">
             <h2 class="panel-card-title mb-3">Evidencias Adjuntas</h2>
             
-            <!-- Zona de Carga / Dropzone -->
-            <div class="evidence-dropzone" id="dropzone-evidencia" tabindex="0" role="button" aria-label="Subir archivo de evidencia (JPG, PNG o PDF hasta 10 MB)">
-              <input type="file" id="file-input-evidencia" accept=".jpg,.jpeg,.png,.pdf" class="d-none">
-              <div style="font-size:1.5rem;" aria-hidden="true">📁</div>
-              <div class="fw-semibold mt-1">Arrastra un archivo o haz clic para subir</div>
-              <div class="text-muted" style="font-size:0.775rem;">Formatos aceptados: JPG, PNG, PDF (Máx. 10 MB)</div>
-            </div>
+            ${canUploadEvidence ? `
+              <!-- Zona de Carga / Dropzone -->
+              <div class="evidence-dropzone" id="dropzone-evidencia" tabindex="0" role="button" aria-label="Subir archivo de evidencia (JPG, PNG o PDF hasta 10 MB)">
+                <input type="file" id="file-input-evidencia" accept=".jpg,.jpeg,.png,.pdf" class="d-none">
+                <div style="font-size:1.5rem;" aria-hidden="true">📁</div>
+                <div class="fw-semibold mt-1">Arrastra un archivo o haz clic para subir</div>
+                <div class="text-muted" style="font-size:0.775rem;">Formatos aceptados: JPG, PNG, PDF (Máx. 10 MB)</div>
+              </div>
 
-            <!-- Progreso de Subida -->
-            <div id="upload-progress-box" class="upload-progress-wrapper d-none">
-              <div class="d-flex justify-content-between align-items-center mb-1" style="font-size:0.775rem;">
-                <span id="upload-filename" class="font-mono text-truncate">Subiendo archivo...</span>
-                <span id="upload-percentage" class="font-mono fw-bold">0%</span>
+              <!-- Progreso de Subida -->
+              <div id="upload-progress-box" class="upload-progress-wrapper d-none">
+                <div class="d-flex justify-content-between align-items-center mb-1" style="font-size:0.775rem;">
+                  <span id="upload-filename" class="font-mono text-truncate">Subiendo archivo...</span>
+                  <span id="upload-percentage" class="font-mono fw-bold">0%</span>
+                </div>
+                <div class="progress-custom">
+                  <div id="upload-progress-bar" class="progress-bar-custom" style="width: 0%;"></div>
+                </div>
               </div>
-              <div class="progress-custom">
-                <div id="upload-progress-bar" class="progress-bar-custom" style="width: 0%;"></div>
-              </div>
-            </div>
+            ` : ''}
 
             <!-- Lista de Archivos -->
-            <div class="evidence-list" id="evidence-items-container">
+            <div class="evidence-list ${canUploadEvidence ? 'mt-3' : ''}" id="evidence-items-container">
               ${(inc.evidencias_adjuntas || []).length === 0 ? `
                 <div class="text-muted text-center py-3" style="font-size:0.85rem;">
                   No hay evidencias adjuntas para este reporte.
@@ -405,40 +491,55 @@ export async function renderDetalleView(container, codigo) {
   }
 
   function setupInteractions(inc) {
-    // 1. Asignar Técnico (RF-09)
+    // 1. Autoasignar Técnico (RF-13)
+    const btnAutoasignar = container.querySelector('#btn-autoasignar');
+    btnAutoasignar?.addEventListener('click', async () => {
+      btnAutoasignar.disabled = true;
+      btnAutoasignar.textContent = 'Autoasignando...';
+      try {
+        await patchTecnico(inc.codigo, { autoasignar: true });
+        showToast('Te has autoasignado esta incidencia exitosamente', 'success');
+        await renderDetalleView(container, inc.codigo);
+      } catch (err) {
+        showToast(err.message, 'error');
+        btnAutoasignar.disabled = false;
+        btnAutoasignar.textContent = '⚡ Autoasignarme este Ticket (RF-13)';
+      }
+    });
+
+    // 2. Asignar / Reasignar por Coordinador (RF-14)
     const formTecnico = container.querySelector('#form-tecnico');
-    const inputTecnico = container.querySelector('#input-tecnico');
+    const inputTecnicoCorreo = container.querySelector('#input-tecnico-correo');
     const btnGuardarTecnico = container.querySelector('#btn-guardar-tecnico');
 
     formTecnico?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const nuevoTecnico = inputTecnico.value.trim();
+      const correo = inputTecnicoCorreo?.value?.trim();
+      if (!correo) return;
       btnGuardarTecnico.disabled = true;
-      btnGuardarTecnico.textContent = 'Guardando...';
+      btnGuardarTecnico.textContent = 'Asignando...';
 
       try {
-        await patchTecnico(inc.codigo, { tecnico_asignado: nuevoTecnico });
-        showToast(`Técnico asignado exitosamente: ${nuevoTecnico}`, 'success');
-        // Recargar detalle para mantener sincronía
+        await patchTecnico(inc.codigo, { tecnico_asignado: correo });
+        showToast(`Técnico asignado exitosamente: ${correo}`, 'success');
         await renderDetalleView(container, inc.codigo);
       } catch (err) {
         showToast(err.message, 'error');
         btnGuardarTecnico.disabled = false;
-        btnGuardarTecnico.textContent = 'Guardar';
+        btnGuardarTecnico.textContent = 'Asignar';
       }
     });
 
-    // 2. Cambio de Estado (RF-08)
+    // 3. Cambio de Estado y Bitácora (RF-11, RF-12, RF-15)
     const formEstado = container.querySelector('#form-estado');
     const selectEstado = container.querySelector('#select-nuevo-estado');
-    const inputAutor = container.querySelector('#input-autor');
     const inputHoras = container.querySelector('#input-horas');
     const textareaComentario = container.querySelector('#textarea-comentario');
     const btnGuardarEstado = container.querySelector('#btn-guardar-estado');
 
     formEstado?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const horasVal = parseFloat(inputHoras.value);
+      const horasVal = parseFloat(inputHoras?.value || '0');
       if (isNaN(horasVal) || horasVal < 0) {
         showToast('Las horas deben ser un número mayor o igual a 0', 'error');
         return;
@@ -450,8 +551,7 @@ export async function renderDetalleView(container, codigo) {
       try {
         await patchEstado(inc.codigo, {
           estado_nuevo: selectEstado.value,
-          autor: inputAutor.value.trim(),
-          comentario: textareaComentario.value.trim(),
+          comentario: textareaComentario?.value?.trim() || '',
           horas: horasVal
         });
         showToast('Bitácora y estado actualizados correctamente', 'success');
@@ -459,7 +559,7 @@ export async function renderDetalleView(container, codigo) {
       } catch (err) {
         showToast(err.message, 'error');
         btnGuardarEstado.disabled = false;
-        btnGuardarEstado.textContent = 'Guardar Actualización';
+        btnGuardarEstado.textContent = 'Guardar Avance en Bitácora';
       }
     });
 

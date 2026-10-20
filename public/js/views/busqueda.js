@@ -119,7 +119,7 @@ export async function renderBusquedaView(container) {
             </div>
             <div class="d-flex justify-content-between align-items-center pt-2 border-top" style="font-size:0.775rem; color:var(--text-muted);">
               <span>📍 ${esc(inc.ubicacion?.edificio || 'Campus')}</span>
-              <span>👤 ${esc(inc.tecnico_asignado || 'Sin asignar')}</span>
+              <span>👤 ${esc(typeof inc.tecnico_asignado === 'object' && inc.tecnico_asignado ? inc.tecnico_asignado.nombre : (inc.tecnico_asignado || 'Sin asignar'))}</span>
             </div>
           </article>
         `).join('')}
@@ -155,7 +155,7 @@ export async function renderBusquedaView(container) {
                 <td>${renderPriorityBadge(inc.prioridad)}</td>
                 <td>${renderStatusBadge(inc.estado)}</td>
                 <td><span style="font-size:0.825rem;">${esc(inc.ubicacion?.edificio || '—')}</span></td>
-                <td><span class="${inc.tecnico_asignado ? 'fw-medium' : 'text-muted'}" style="font-size:0.825rem;">${esc(inc.tecnico_asignado || 'Sin asignar')}</span></td>
+                <td><span class="${inc.tecnico_asignado ? 'fw-medium' : 'text-muted'}" style="font-size:0.825rem;">${esc(typeof inc.tecnico_asignado === 'object' && inc.tecnico_asignado ? inc.tecnico_asignado.nombre : (inc.tecnico_asignado || 'Sin asignar'))}</span></td>
                 <td><span class="font-mono text-muted" style="font-size:0.775rem;">${formatDate(inc.fecha_creacion)}</span></td>
               </tr>
             `).join('')}

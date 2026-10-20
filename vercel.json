@@ -12,6 +12,7 @@
   ],
   "routes": [
     { "src": "/api/auth/login",                              "dest": "/api/auth/login.js" },
+    { "src": "/api/auth/register",                           "dest": "/api/auth/register.js" },
     { "src": "/api/incidencias/([^/]+)/estado",              "dest": "/api/incidencias/[codigo]/estado.js" },
     { "src": "/api/incidencias/([^/]+)/tecnico",             "dest": "/api/incidencias/[codigo]/tecnico.js" },
     { "src": "/api/incidencias/([^/]+)/tags/([^/]+)",        "dest": "/api/incidencias/[codigo]/tags.js" },

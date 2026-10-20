@@ -60,14 +60,16 @@ export function clearSession() {
 }
 
 /**
- * Verifica si el usuario tiene al menos el nivel requerido.
- * Jerarquía: reportante < tecnico < coordinador < directivo
- * @param {'reportante'|'tecnico'|'coordinador'|'directivo'} nivelMinimo
+ * Verifica si el usuario activo tiene alguno de los roles permitidos.
+ * @param {...('reportante'|'tecnico'|'coordinador'|'directivo')} roles
  */
-const JERARQUIA = ['reportante', 'tecnico', 'coordinador', 'directivo'];
-
-export function tieneAcceso(nivelMinimo) {
+export function tieneRol(...roles) {
   const usuario = getUsuario();
   if (!usuario) return false;
-  return JERARQUIA.indexOf(usuario.nivel_acceso) >= JERARQUIA.indexOf(nivelMinimo);
+  return roles.includes(usuario.nivel_acceso);
 }
+
+export function tieneAcceso(...roles) {
+  return tieneRol(...roles);
+}
+
