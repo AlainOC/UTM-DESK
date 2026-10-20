@@ -195,7 +195,7 @@ function updateNavActive(route) {
 async function handleRouting() {
   const hash = window.location.hash || '#/tablero';
 
-  // ── Rutas públicas sin autenticación ──────────────────────────────────
+  // ── Rutas públicas de acceso (sin sesión previa) ──────────────────────
   if (!isLoggedIn()) {
     renderUserChip();
     filterNavByRole();

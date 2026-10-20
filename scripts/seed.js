@@ -8,6 +8,11 @@
  */
 import 'dotenv/config';
 import mongoose from 'mongoose';
+import dns from 'dns';
+
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch {}
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Usuario } from '../lib/models/Usuario.js';

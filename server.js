@@ -56,12 +56,16 @@ import incidenciaEvidenciasUrl from './api/incidencias/[codigo]/evidencias/url.j
 import busqueda from './api/busqueda/index.js';
 import analiticaEdificios from './api/analitica/edificios.js';
 import analiticaTags from './api/analitica/tags.js';
+import evidenciasUpload from './api/evidencias/upload.js';
 import evidenciasUploadToken from './api/evidencias/upload-token.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
 // ── Middlewares globales ───────────────────────────────────────────────────
+// Subida binaria de evidencias antes de parsear JSON
+app.use(evidenciasUpload);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -89,8 +93,12 @@ app.use(analiticaEdificios);
 app.use(analiticaTags);
 app.use(evidenciasUploadToken);
 
-// ── Frontend estático ──────────────────────────────────────────────────────
-app.use(express.static(path.join(__dirname, 'public')));
+// ── Frontend estático (sin caché agresivo para reflejar cambios de inmediato) ──
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  }
+}));
 
 // SPA fallback
 app.get('*', (req, res) => {

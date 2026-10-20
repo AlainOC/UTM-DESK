@@ -24,6 +24,7 @@
     { "src": "/api/busqueda",                                "dest": "/api/busqueda/index.js" },
     { "src": "/api/analitica/edificios",                     "dest": "/api/analitica/edificios.js" },
     { "src": "/api/analitica/tags",                          "dest": "/api/analitica/tags.js" },
+    { "src": "/api/evidencias/upload",                       "dest": "/api/evidencias/upload.js" },
     { "src": "/api/evidencias/upload-token",                 "dest": "/api/evidencias/upload-token.js" },
     { "src": "/(.*)",                                        "dest": "/public/$1" }
   ],

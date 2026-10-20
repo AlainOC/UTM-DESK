@@ -1,88 +1,227 @@
-# UTM Desk — Frontend
+# UTM Desk NoSQL Cloud
 
-Interfaz web de alto rendimiento y diseño operativo para el sistema de gestión de incidencias del campus universitario. Diseñado con Vanilla HTML5, CSS3 Custom Properties y JavaScript (ES Modules), cumpliendo los estándares de diseño y accesibilidad de la skill `impeccable`.
-
----
-
-## 1. Cómo Servir la Aplicación
-
-El frontend se compone exclusivamente de archivos estáticos ubicados en el directorio `public/`. Para servirlo localmente durante desarrollo o pruebas:
-
-### Opción A: Con `serve` (Node.js / npx)
-```bash
-npx serve public -l 3000
-```
-
-### Opción B: Con Python 3
-```bash
-python -m http.server 3000 --directory public
-```
-
-### Opción C: Servido directamente desde Express (Producción)
-En el backend Node.js + Express:
-```javascript
-import express from 'express';
-import path from 'path';
-
-const app = express();
-app.use(express.static('public'));
-
-// Las rutas de API se montan en /api/...
-// ...
-app.listen(3000, () => console.log('UTM Desk en http://localhost:3000'));
-```
-
-Abre tu navegador en `http://localhost:3000`.
+Sistema integral de gestión de incidencias técnicas, infraestructura y plataformas académicas para campus universitarios. Construido sobre **MongoDB Atlas**, con arquitectura basada en documentos BSON completos (sin `$lookup` en transacciones habituales), autenticación JWT de 8 horas con bcrypt, control de acceso basado en roles (RBAC) de cuatro niveles y almacenamiento seguro de evidencias en Vercel Blob.
 
 ---
 
-## 2. Cómo Alternar Modo Mock y Backend Real
+## 1. Requisitos Previos
 
-El modo mock viene **activado por defecto** (`USE_MOCK = true`) con tres incidencias completas de prueba representativas de cada categoría (`computo_redes`, `infraestructura` y `academico`), permitiendo probar y navegar toda la aplicación sin requerir el backend ni base de datos activa.
+- **Node.js**: Versión 18.0.0 o superior (`node -v`).
+- **NPM**: Versión 9.0.0 o superior (`npm -v`).
+- **Base de Datos**: Clúster de MongoDB Atlas (versión 6.0+) o instancia de MongoDB local. Para pruebas automatizadas locales, se incluye `mongodb-memory-server` con el motor nativo de WiredTiger.
 
-Para conectar con el backend real en Node.js + Express + MongoDB Atlas:
-1. Abre el archivo [`public/js/config.js`](public/js/config.js).
-2. Cambia la constante `USE_MOCK`:
-   ```javascript
-   // Cambiar a false para enviar peticiones HTTP reales a /api/...
-   export const USE_MOCK = false;
+---
+
+## 2. Instalación
+
+1. Clonar el repositorio:
+   ```bash
+   git clone https://github.com/AlainOC/UTM-DESK.git
+   cd UTM-DESK
    ```
-3. Guarda el archivo y recarga la página en el navegador. El indicador "MOCK ACTIVO" de la barra de navegación se ocultará automáticamente.
+
+2. Instalar dependencias de producción y desarrollo:
+   ```bash
+   npm install
+   ```
 
 ---
 
-## 3. Contrato de API (Rutas a Implementar por el Backend)
+## 3. Variables de Entorno
 
-Todas las rutas responden en formato `application/json`. En caso de error (status 400, 404, 500), el backend debe devolver `{ "error": "Mensaje legible del error" }`.
+El archivo `.env` está ignorado por control de versiones (`.gitignore`) para garantizar la seguridad de los secretos. Copie la plantilla base:
 
-| Método | Ruta | Descripción | Payload / Parámetros | Respuesta Exitosa |
-|---|---|---|---|---|
-| `POST` | `/api/incidencias` | Crea una nueva incidencia. El backend genera `codigo` (INC-AAAA-NNNN), `estado: 'abierta'`, `fecha_creacion`, etc. | `{ titulo, descripcion, categoria, prioridad, reportante: {...}, ubicacion: {...}, detalle_especifico: {...}, tecnico_asignado? }` | 201 `{ codigo, ... }` |
-| `GET` | `/api/incidencias` | Lista de incidencias más recientes primero. | Query params opcionales: `?categoria=&estado=&prioridad=&edificio=` | 200 `[incidencia, ...]` |
-| `GET` | `/api/incidencias/:codigo` | Consulta una incidencia completa por su código. | Parámetro de ruta `:codigo` (ej. `INC-2026-0042`) | 200 `{ ...incidencia }` / 404 |
-| `PATCH` | `/api/incidencias/:codigo/estado` | Cambia estado, registra avance en bitácora y acumula horas. | `{ estado_nuevo, autor, comentario, horas }` | 200 `{ ...incidencia_actualizada }` |
-| `PATCH` | `/api/incidencias/:codigo/tecnico` | Asigna o reasigna técnico responsable. | `{ tecnico_asignado }` | 200 `{ ...incidencia_actualizada }` |
-| `POST` | `/api/incidencias/:codigo/tags` | Agrega una etiqueta normalizada. | `{ tag }` | 200 `{ ...incidencia_actualizada }` |
-| `DELETE` | `/api/incidencias/:codigo/tags/:tag` | Elimina una etiqueta de la incidencia. | Parámetros de ruta `:codigo` y `:tag` | 200 `{ ...incidencia_actualizada }` |
-| `POST` | `/api/incidencias/:codigo/evidencias` | Registra metadatos de evidencia tras subida exitosa. | `{ nombre_archivo, tipo_mime, peso_kb, url_storage }` | 200 `{ ...incidencia_actualizada }` |
-| `GET` | `/api/incidencias/:codigo/evidencias/url` | Genera una URL firmada temporal de acceso al archivo. | Query param: `?path=...` | 200 `{ "url": "https://..." }` |
-| `POST` | `/api/evidencias/upload-token` | Genera token de autorización para `@vercel/blob/client` en subida directa desde el navegador. | Gestionado internamente por el SDK de Vercel Blob | 200 token |
-| `GET` | `/api/busqueda` | Búsqueda por texto indexado o relevancia. | Query param: `?q=texto` | 200 `[incidencia, ...]` ordenadas por relevancia |
-| `GET` | `/api/analitica/edificios` | Métricas de horas acumuladas y tickets resueltos por edificio (últimos 60 días TTL). | Ninguno | 200 `[{ edificio, promedio_horas, total_horas, incidencias }]` |
-| `GET` | `/api/analitica/tags` | Ranking de las 10 etiquetas más recurrentes en incidencias resueltas. | Ninguno | 200 `[{ tag, total }]` |
+```bash
+cp .env.example .env
+```
+
+Edite `.env` con los valores correspondientes:
+
+| Variable | Propósito | Obligatoria |
+|---|---|---|
+| `MONGODB_URI` | Cadena de conexión a MongoDB Atlas (`mongodb+srv://...`) o local. | Sí (en producción y desarrollo normal) |
+| `MONGODB_URI_TEST` | Base de datos aislada para pruebas e2e (`utm_desk_test`). | Opcional (pruebas usan `mongodb-memory-server` si no se define) |
+| `JWT_SECRET` | Clave criptográfica para firma de tokens JWT (HS256). El servidor se niega a arrancar sin ella. | Sí |
+| `BLOB_READ_WRITE_TOKEN` | Token de acceso para Vercel Blob (almacenamiento privado de evidencias). | Solo para subida de archivos reales |
+| `SEED_PASSWORD` | Contraseña asignada a las cuentas de prueba durante la siembra de datos. | Opcional (se autogenera una segura si no se define) |
+| `PORT` | Puerto de escucha del servidor local (por defecto `3000`). | Opcional |
+| `USE_MEMORY_DB` | Fallback de memoria **exclusivamente** para desarrollo local sin conexión. Nunca se activa en producción. | Opcional (`false` por defecto) |
+
+> **Nota de Seguridad:** El servidor validará al iniciar que `JWT_SECRET` esté definido y no utilizará valores por defecto inseguros. Si `MONGODB_URI` no está disponible y `USE_MEMORY_DB` no fue activado explícitamente, el servidor se detendrá con un error fatal.
 
 ---
 
-## 4. Asunciones de Diseño y Datos
+## 4. Inicialización de Índices y Validadores
 
-1. **Esquema Polimórfico Estricto**:
-   - `computo_redes`: requiere `tipo_falla`, `equipo`, `direccion_ip` (IPv4 validada), `vlan` (1 a 4094), `puerto_uplink`, `equipos_afectados` (entero ≥ 0).
-   - `infraestructura`: requiere `tipo_dano`, `riesgo_seguridad` (bajo, medio, alto), `insumos_requeridos` (arreglo de strings). Solo si `requiere_contratista: true` se envía el campo `contratista`.
-   - `academico`: requiere `plataforma`, `codigo_curso`, `periodo_escolar`, `estudiantes_impactados` (entero ≥ 0), `mensaje_error`.
-   - Se ejecuta sanitización estricta (`cleanPayload`) en cliente para nunca enviar cadenas vacías ni propiedades `null`.
-2. **Cómputo de Retención TTL**:
-   - Cuando una incidencia pasa a estado `resuelta` o `cerrada`, el frontend asume que el backend registra `fecha_resolucion` y muestra el aviso de eliminación programada en `fecha_resolucion + 60 días`.
-3. **Subida de Archivos Vercel Blob**:
-   - En producción con backend real, el navegador contacta a `/api/evidencias/upload-token` y sube directo a Vercel Blob. En modo mock (`USE_MOCK = true`), se simula la subida con barra de progreso y se asocia la URL de demostración sin bloquear el flujo.
-4. **Estado en Memoria**:
-   - No se utiliza `localStorage` para datos de negocio. Las modificaciones en modo mock se mantienen en memoria durante la sesión del navegador.
+El script de índices es **re-ejecutable e idempotente**. Aplica validadores `$jsonSchema` estrictos en MongoDB y crea los índices requeridos:
+
+```bash
+npm run indexes
+```
+
+### Índices configurados:
+- **`usuarios`**:
+  - `correo_unico` (`{ correo: 1 }`, único).
+- **`incidencias_campus`**:
+  - `codigo_unico` (`{ codigo: 1 }`, único).
+  - `idx_tablero_filtros` (`{ categoria: 1, estado: 1, "ubicacion.edificio": 1 }`).
+  - `idx_busqueda_texto` (`{ titulo: "text", descripcion: "text" }`, ponderación: `titulo: 10`, `descripcion: 5`, idioma español).
+  - `idx_ttl_60_dias` (`{ fecha_resolucion: 1 }`, `expireAfterSeconds: 5184000`).
+
+---
+
+## 5. Siembra de Datos (Seed)
+
+Para poblar la base de datos con las cuentas de referencia institucionales y las incidencias de demostración de cada categoría:
+
+```bash
+npm run seed
+```
+
+### Cuentas creadas por el sembrado:
+| Rol | Correo | Propósito |
+|---|---|---|
+| **Reportante** | `laura.mendez@campus.example.edu` | Docente, registro y seguimiento de incidencias propias. |
+| **Técnico** | `carlos.ruiz@campus.example.edu` | Técnico operativo, autoasignación, cambio de estado, horas y evidencias. |
+| **Coordinador** | `ana.pech@campus.example.edu` | Coordinador de soporte, asignación manual, cierre o reapertura. |
+| **Directivo** | `jorge.herrera@campus.example.edu` | Acceso exclusivo a analítica y métricas operativas por campus. |
+
+---
+
+## 6. Pruebas Automatizadas
+
+La suite de pruebas ejecuta validaciones contra el motor de **MongoDB real** (`mongodb-memory-server` con WiredTiger BSON).
+
+Ejecutar todas las pruebas del sistema:
+```bash
+npm test
+```
+
+### Pruebas individuales disponibles:
+- `node tests/test_e2e.js`: Suite completa end-to-end (37 pruebas de funcionalidad RF-01 a RF-24).
+- `node tests/test_rnf01_integridad.js`: Integridad en driver nativo y rechazo por `$jsonSchema` estricto (RNF-01).
+- `node tests/test_rnf02_concurrencia.js`: Escrituras atómicas con `Promise.all` sin patrones de sobreescritura (RNF-02).
+- `node tests/test_rnf03_rendimiento.js`: Análisis de planes de ejecución `explain()` en índices y pipelines (RNF-03).
+- `node tests/test_rnf04_indexes.js`: Idempotencia de índices y resolución de conflictos (RNF-04).
+- `node tests/test_rnf05_capacidad.js`: Documentos sin binarios y topes a comentarios, tags y evidencias (RNF-05).
+- `node tests/test_rnf06_archivos.js`: Almacenamiento privado, tipo MIME y URLs temporales de 5 min (RNF-06).
+- `node tests/test_rnf07_secretos.js`: Auditoría de secretos y variables de entorno (RNF-07).
+- `node tests/test_rnf08_autenticacion.js`: JWT de 8h, firmas y rechazo inmediato de cuentas suspendidas (RNF-08).
+- `node tests/test_rnf09_autorizacion.js`: Matriz sistemática de permisos por rol y propiedad de tickets (RNF-09).
+- `node tests/test_rnf10_contrasenas.js`: Longitud mínima (8 chars), bcrypt y exclusión de hashes (RNF-10).
+- `node tests/test_rnf14_fechas.js`: Almacenamiento de marcas temporales como BSON Date nativo (RNF-14).
+- `node tests/test_rnf15_serverless.js`: Singleton de conexión reutilizada y configuración `vercel.json` (RNF-15).
+
+---
+
+## 7. Pruebas de API con Postman
+
+Se incluye una colección completa compatible con Postman v2.1.0 en el directorio `docs/postman/`:
+
+- **Colección**: `docs/postman/utm_desk.postman_collection.json`
+- **Entorno**: `docs/postman/utm_desk.postman_environment.json`
+
+### Características de la colección:
+- Peticiones para cada endpoint del sistema (Auth, Incidencias, Seguimiento, Etiquetas, Evidencias, Búsqueda y Analítica).
+- Pruebas sistemáticas para códigos **400 (Bad Request)**, **401 (Unauthorized)**, **403 (Forbidden)** y **404 (Not Found)**.
+- Pre-request script que realiza **auto-login automático** por rol si el token correspondiente no está presente en el entorno.
+- El archivo de entorno exportado contiene únicamente claves descriptivas sin contraseñas ni tokens reales.
+
+### Cómo medir tiempos de respuesta en Postman (RNF-03):
+1. Importar la colección y el entorno en Postman.
+2. Ejecutar la colección completa con el **Collection Runner** o individualmente.
+3. Postman muestra el tiempo de respuesta en milisegundos junto a la pestaña *Test Results*.
+4. **Límites aceptados**:
+   - Listado, detalle y escrituras simples: **< 2000 ms**.
+   - Búsqueda texto completo y agregaciones de analítica: **< 3000 ms**.
+
+---
+
+## 8. Ejecución en Local
+
+Iniciar el servidor de desarrollo:
+```bash
+npm start
+```
+O en modo vigilancia de cambios:
+```bash
+npm run dev
+```
+
+La consola confirmará el arranque:
+```
+🚀 UTM Desk corriendo en http://localhost:3000
+   Frontend: http://localhost:3000
+   API:      http://localhost:3000/api/...
+   Modo:     Backend real (MongoDB)
+```
+
+Abra el navegador en `http://localhost:3000`.
+
+---
+
+## 9. Despliegue en Vercel
+
+El repositorio está configurado para despliegue serverless continuo a través de `vercel.json`:
+
+1. Instalar Vercel CLI o conectar el repositorio en [vercel.com](https://vercel.com).
+2. Configurar las variables de entorno en el panel de Vercel (**Settings > Environment Variables**):
+   - `MONGODB_URI`: Cadena de conexión a MongoDB Atlas.
+   - `JWT_SECRET`: Clave secreta para firma de tokens.
+   - `BLOB_READ_WRITE_TOKEN`: Token generado en Vercel Blob Store.
+3. Desplegar:
+   ```bash
+   vercel --prod
+   ```
+
+### Arquitectura en Vercel:
+- **Frontend y API en el mismo dominio**: `vercel.json` enruta `/api/*` a las funciones sin estado (`@vercel/node`) y el resto al directorio estático `/public` (`@vercel/static`), eliminando problemas de CORS.
+- **Reutilización de conexión (Connection Pooling)**: `lib/db.js` almacena en `global._mongooseConn` la conexión activa, reutilizándola entre invocaciones cálidas para evitar sobrecargar los sockets de MongoDB Atlas.
+
+---
+
+## 10. Estructura por Capas del Proyecto
+
+```
+utm-desk/
+├── api/                       # Controladores de endpoints serverless
+│   ├── auth/                  # /api/auth (login, register)
+│   ├── incidencias/           # /api/incidencias (CRUD, estado, tecnico, tags, evidencias)
+│   ├── busqueda/              # /api/busqueda (texto completo con $text)
+│   ├── analitica/             # /api/analitica (edificios, tags)
+│   └── evidencias/            # /api/evidencias (upload-token)
+├── lib/                       # Capa de dominio y lógica del negocio
+│   ├── db.js                  # Conexión singleton y pooling a MongoDB
+│   ├── middleware/            # Middlewares de autenticación JWT y autorización RBAC
+│   ├── models/                # Modelos y esquemas de Mongoose con driver nativo
+│   ├── services/              # Lógica transaccional (incidenciaService, usuarioService)
+│   └── memoryFallback.js      # Emulador de respaldo para desarrollo offline aislado
+├── public/                    # Frontend SPA Vanilla (HTML5 + CSS3 + ES Modules)
+│   ├── css/styles.css         # Sistema de diseño e interfaz operativa
+│   ├── js/
+│   │   ├── app.js             # Enrutador cliente y control de navegación por rol
+│   │   ├── api.js             # Cliente HTTP fetch con inyección de JWT
+│   │   └── views/             # Vistas dinámicas (login, registro, tablero, detalle, busqueda, analitica)
+│   └── index.html             # Shell principal de la aplicación
+├── scripts/                   # Scripts de mantenimiento y utilidades
+│   ├── indexes.js             # Creación de índices y validadores $jsonSchema
+│   └── seed.js                # Siembra de cuentas institucionales e incidencias
+├── docs/                      # Documentación del sistema
+│   ├── requisitos.md          # Especificación formal de requisitos funcionales y no funcionales
+│   └── postman/               # Colección y entorno de pruebas Postman v2.1.0
+├── tests/                     # Suites de pruebas automatizadas contra MongoDB real
+├── vercel.json                # Configuración de despliegue y ruteo unificado
+└── package.json               # Dependencias y scripts de ejecución
+```
+
+---
+
+## 11. Política de Retención TTL (RNF-17)
+
+Las incidencias resueltas se conservan en la base de datos durante un periodo de **60 días** a partir del valor del campo `fecha_resolucion`. Cumplido este plazo, el proceso en segundo plano de MongoDB Atlas elimina automáticamente los documentos utilizando el índice TTL:
+
+```javascript
+{ fecha_resolucion: 1 }, { expireAfterSeconds: 5184000 }
+```
+
+**Limitación de diseño asumida:** Los módulos de analítica operativa (métrica de horas por edificio y ranking de etiquetas más frecuentes) cubren exclusivamente las incidencias resueltas dentro de la ventana activa de los últimos 60 días. Esta condición está documentada y señalizada explícitamente en la pantalla de analítica para los usuarios con rol directivo.

@@ -13,7 +13,7 @@ import {
   addEvidencia,
   getEvidenciaUrl
 } from '../api.js';
-import { getUsuario } from '../auth.js';
+import { getUsuario, getToken } from '../auth.js';
 import { USE_MOCK, ESTADOS, NIVELES_RIESGO, ROLES_REPORTANTE } from '../config.js';
 import {
   esc,
@@ -684,24 +684,35 @@ export async function renderDetalleView(container, codigo) {
             progressBar.style.width = `${p}%`;
             progressPercentage.textContent = `${p}%`;
           }
-          storageUrl = `https://blob.vercel-storage.com/incidencias/${inc.codigo}/${encodeURIComponent(file.name)}`;
+          storageUrl = `https://mock.blob.local/incidencias/${inc.codigo}/${encodeURIComponent(file.name)}`;
         } else {
-          // Subida real mediante Vercel Blob Client
-          try {
-            const { upload } = await import('https://esm.sh/@vercel/blob@0.27.1/client');
-            const blobResult = await upload(`incidencias/${inc.codigo}/${file.name}`, file, {
-              access: 'private',
-              handleUploadUrl: '/api/evidencias/upload-token',
-              onUploadProgress: (progressEvent) => {
-                const pct = Math.round((progressEvent.loaded / progressEvent.total) * 100);
-                progressBar.style.width = `${pct}%`;
-                progressPercentage.textContent = `${pct}%`;
-              }
-            });
-            storageUrl = blobResult.url;
-          } catch (uploadError) {
-            throw new Error(`Fallo en la subida a almacenamiento: ${uploadError.message}`);
+          // Subida real a Vercel Blob mediante endpoint del servidor (/api/evidencias/upload)
+          progressBar.style.width = '35%';
+          progressPercentage.textContent = '35%';
+
+          const token = getToken();
+          if (!token) {
+            throw new Error('Sesión no encontrada o expirada. Por favor, vuelve a iniciar sesión.');
           }
+
+          const uploadRes = await fetch(`/api/evidencias/upload?codigo=${encodeURIComponent(inc.codigo)}&filename=${encodeURIComponent(file.name)}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': file.type || 'application/octet-stream'
+            },
+            body: file
+          });
+
+          progressBar.style.width = '80%';
+          progressPercentage.textContent = '80%';
+
+          const uploadData = await uploadRes.json();
+          if (!uploadRes.ok) {
+            throw new Error(uploadData.error || 'Error al subir archivo a Vercel Blob');
+          }
+
+          storageUrl = uploadData.url;
         }
 
         progressBar.style.width = '100%';
