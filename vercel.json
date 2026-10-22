@@ -27,10 +27,5 @@
     { "src": "/api/evidencias/upload",                       "dest": "/api/evidencias/upload.js" },
     { "src": "/api/evidencias/upload-token",                 "dest": "/api/evidencias/upload-token.js" },
     { "src": "/(.*)",                                        "dest": "/public/$1" }
-  ],
-  "env": {
-    "MONGODB_URI": "@mongodb_uri",
-    "JWT_SECRET": "@jwt_secret",
-    "BLOB_READ_WRITE_TOKEN": "@blob_read_write_token"
-  }
+  ]
 }
