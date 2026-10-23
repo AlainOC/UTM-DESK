@@ -8,6 +8,8 @@
    ========================================================================== */
 
 :root {
+  color-scheme: light;
+
   /* Tipografía */
   --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'IBM Plex Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -52,8 +54,8 @@
   --border-strong: #94a3b8;
 
   --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
+  --text-secondary: #334155;
+  --text-muted: #55647a;
   --text-inverse: #ffffff;
 
   /* Acento institucional: Azul Cobalto de Alta Precisión */
@@ -63,6 +65,23 @@
   --accent-subtle: #e0f2fe;
   --accent-border: #bae6fd;
   --accent-text: #0369a1;
+
+  /* Badges de nivel de acceso (Modo Claro) */
+  --badge-report-color: #334155;
+  --badge-report-bg: rgba(51, 65, 85, 0.08);
+  --badge-report-border: rgba(51, 65, 85, 0.2);
+
+  --badge-tec-color: #0369a1;
+  --badge-tec-bg: rgba(2, 132, 199, 0.08);
+  --badge-tec-border: rgba(2, 132, 199, 0.25);
+
+  --badge-coord-color: #047857;
+  --badge-coord-bg: rgba(5, 150, 105, 0.08);
+  --badge-coord-border: rgba(5, 150, 105, 0.25);
+
+  --badge-direct-color: #c2410c;
+  --badge-direct-bg: rgba(194, 65, 12, 0.08);
+  --badge-direct-border: rgba(194, 65, 12, 0.25);
 
   /* Sombras sutiles con desplazamiento suave (sin halos planos) */
   --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
@@ -124,11 +143,20 @@
   --cat-acad-border: #e9d5ff;
   --cat-acad-text: #6b21a8;
 
-  /* Sobreescritura de tokens de Bootstrap */
+  /* Sobreescritura estricta de tokens de Bootstrap para coherencia total */
   --bs-body-font-family: var(--font-sans);
   --bs-body-bg: var(--bg-canvas);
   --bs-body-color: var(--text-primary);
+  --bs-body-color-rgb: 15, 23, 42;
+  --bs-secondary-color: var(--text-muted);
+  --bs-secondary-rgb: 85, 100, 122;
+  --bs-tertiary-color: var(--text-muted);
+  --bs-tertiary-bg: var(--bg-subtle);
+  --bs-heading-color: var(--text-primary);
   --bs-primary: var(--accent-primary);
+  --bs-primary-rgb: 2, 132, 199;
+  --bs-link-color: var(--accent-primary);
+  --bs-link-hover-color: var(--accent-hover);
   --bs-border-color: var(--border-subtle);
   --bs-border-radius: var(--radius-sm);
   --bs-border-radius-sm: var(--radius-xs);
@@ -138,6 +166,8 @@
 /* --- MODO OSCURO (Automático vía prefers-color-scheme o forzado con data-theme="dark") --- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
     --bg-canvas: #090d16;
     --bg-surface: #111827;
     --bg-surface-elevated: #162032;
@@ -159,6 +189,23 @@
     --accent-subtle: #082f49;
     --accent-border: #0c4a6e;
     --accent-text: #38bdf8;
+
+    /* Badges de nivel de acceso (Modo Oscuro) */
+    --badge-report-color: #cbd5e1;
+    --badge-report-bg: rgba(148, 163, 184, 0.15);
+    --badge-report-border: rgba(148, 163, 184, 0.3);
+
+    --badge-tec-color: #38bdf8;
+    --badge-tec-bg: rgba(56, 189, 248, 0.12);
+    --badge-tec-border: rgba(56, 189, 248, 0.3);
+
+    --badge-coord-color: #34d399;
+    --badge-coord-bg: rgba(52, 211, 153, 0.12);
+    --badge-coord-border: rgba(52, 211, 153, 0.3);
+
+    --badge-direct-color: #fb923c;
+    --badge-direct-bg: rgba(251, 146, 60, 0.12);
+    --badge-direct-border: rgba(251, 146, 60, 0.3);
 
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
@@ -218,10 +265,24 @@
 
     --bs-body-bg: var(--bg-canvas);
     --bs-body-color: var(--text-primary);
+    --bs-body-color-rgb: 248, 250, 252;
+    --bs-secondary-color: var(--text-muted);
+    --bs-secondary-rgb: 148, 163, 184;
+    --bs-tertiary-color: var(--text-muted);
+    --bs-tertiary-bg: var(--bg-subtle);
+    --bs-heading-color: var(--text-primary);
+    --bs-primary: var(--accent-primary);
+    --bs-primary-rgb: 56, 189, 248;
+    --bs-link-color: var(--accent-primary);
+    --bs-link-hover-color: var(--accent-hover);
+    --bs-border-color: var(--border-subtle);
   }
 }
 
-:root[data-theme="dark"] {
+:root[data-theme="dark"],
+[data-bs-theme="dark"] {
+  color-scheme: dark;
+
   --bg-canvas: #090d16;
   --bg-surface: #111827;
   --bg-surface-elevated: #162032;
@@ -243,6 +304,23 @@
   --accent-subtle: #082f49;
   --accent-border: #0c4a6e;
   --accent-text: #38bdf8;
+
+  /* Badges de nivel de acceso (Modo Oscuro) */
+  --badge-report-color: #cbd5e1;
+  --badge-report-bg: rgba(148, 163, 184, 0.15);
+  --badge-report-border: rgba(148, 163, 184, 0.3);
+
+  --badge-tec-color: #38bdf8;
+  --badge-tec-bg: rgba(56, 189, 248, 0.12);
+  --badge-tec-border: rgba(56, 189, 248, 0.3);
+
+  --badge-coord-color: #34d399;
+  --badge-coord-bg: rgba(52, 211, 153, 0.12);
+  --badge-coord-border: rgba(52, 211, 153, 0.3);
+
+  --badge-direct-color: #fb923c;
+  --badge-direct-bg: rgba(251, 146, 60, 0.12);
+  --badge-direct-border: rgba(251, 146, 60, 0.3);
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
@@ -302,6 +380,17 @@
 
   --bs-body-bg: var(--bg-canvas);
   --bs-body-color: var(--text-primary);
+  --bs-body-color-rgb: 248, 250, 252;
+  --bs-secondary-color: var(--text-muted);
+  --bs-secondary-rgb: 148, 163, 184;
+  --bs-tertiary-color: var(--text-muted);
+  --bs-tertiary-bg: var(--bg-subtle);
+  --bs-heading-color: var(--text-primary);
+  --bs-primary: var(--accent-primary);
+  --bs-primary-rgb: 56, 189, 248;
+  --bs-link-color: var(--accent-primary);
+  --bs-link-hover-color: var(--accent-hover);
+  --bs-border-color: var(--border-subtle);
 }
 
 /* ==========================================================================
@@ -360,6 +449,89 @@ body {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
+}
+
+/* ==========================================================================
+   UTILIDADES GLOBALES DE TEXTO, CONTRASTE Y SUPERFICIES (ANTI-SLOP)
+   Neutralizan sobreescrituras opacas de Bootstrap y garantizan legibilidad WCAG AAA
+   ========================================================================== */
+
+/* Enlaces globales */
+a {
+  color: var(--accent-primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--accent-hover);
+}
+
+/* Clases utilitarias de texto con prioridad estricta */
+.text-primary {
+  color: var(--accent-primary) !important;
+}
+
+.text-secondary {
+  color: var(--text-secondary) !important;
+}
+
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+.text-danger {
+  color: #ef4444 !important;
+}
+
+:root:not([data-theme="dark"]):not([data-bs-theme="dark"]) .text-danger {
+  color: #dc2626 !important;
+}
+
+.text-warning-emphasis {
+  color: var(--prio-media-text) !important;
+}
+
+/* Superficies del sistema */
+.bg-subtle {
+  background-color: var(--bg-subtle) !important;
+}
+
+.bg-surface {
+  background-color: var(--bg-surface) !important;
+}
+
+.bg-canvas {
+  background-color: var(--bg-canvas) !important;
+}
+
+/* Bordes funcionales acordes al tema activo */
+.border,
+.border-top,
+.border-bottom,
+.border-start,
+.border-end {
+  border-color: var(--border-subtle) !important;
+}
+
+/* Elementos de código y datos técnicos */
+code {
+  color: var(--accent-text);
+  font-family: var(--font-mono);
+}
+
+/* Placeholders de formularios siempre nítidos en modo claro y oscuro */
+::placeholder,
+.form-control-custom::placeholder,
+.chip-input::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 0.85;
+}
+
+/* Opciones de selector nativo adaptadas al fondo */
+select.form-select-custom option {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
 }
 
 /* ==========================================================================
@@ -803,6 +975,12 @@ body {
   vertical-align: middle;
   font-size: 0.875rem;
   color: var(--text-primary);
+}
+
+.table-operativa td .font-mono.text-muted,
+.ticket-mobile-card .font-mono.text-muted {
+  color: var(--text-muted) !important;
+  font-weight: 500;
 }
 
 .table-operativa tbody tr {
@@ -1622,27 +1800,33 @@ button:disabled,
 }
 
 .badge-reportante {
-  background: rgba(100, 116, 139, 0.15);
-  color: #94a3b8;
-  border-color: rgba(100, 116, 139, 0.3);
+  background: var(--badge-report-bg);
+  color: var(--badge-report-color);
+  border-color: var(--badge-report-border);
 }
 
 .badge-tecnico {
-  background: rgba(56, 189, 248, 0.1);
-  color: var(--accent-primary);
-  border-color: var(--accent-border);
+  background: var(--badge-tec-bg);
+  color: var(--badge-tec-color);
+  border-color: var(--badge-tec-border);
 }
 
 .badge-coordinador {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-  border-color: rgba(16, 185, 129, 0.3);
+  background: var(--badge-coord-bg);
+  color: var(--badge-coord-color);
+  border-color: var(--badge-coord-border);
 }
 
 .badge-directivo {
-  background: rgba(249, 115, 22, 0.1);
-  color: #f97316;
-  border-color: rgba(249, 115, 22, 0.3);
+  background: var(--badge-direct-bg);
+  color: var(--badge-direct-color);
+  border-color: var(--badge-direct-border);
+}
+
+.badge.bg-secondary {
+  background-color: var(--bg-subtle) !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--border-subtle);
 }
 
 /* ==========================================================================

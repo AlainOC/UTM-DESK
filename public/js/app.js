@@ -23,26 +23,47 @@ const navBar = document.querySelector('.app-navbar .container-fluid');
 if (!USE_MOCK && mockBadge) mockBadge.style.display = 'none';
 
 // ==========================================================================
-// TEMA CLARO / OSCURO
+// TEMA CLARO / OSCURO (Sincronización Dual UTM + Bootstrap 5.3)
 // ==========================================================================
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  document.documentElement.setAttribute('data-bs-theme', theme);
+
+  if (themeToggleBtn) {
+    const isDark = theme === 'dark';
+    themeToggleBtn.setAttribute('title', isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
+    themeToggleBtn.setAttribute('aria-label', isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
+    const icon = themeToggleBtn.querySelector('#theme-icon');
+    if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+  }
+}
 
 function initTheme() {
   const saved = sessionStorage.getItem('utm_theme_preference');
-  if (saved === 'dark' || saved === 'light') {
-    document.documentElement.setAttribute('data-theme', saved);
-  }
+  const isDark = saved === 'dark' || (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const theme = isDark ? 'dark' : 'light';
+  applyTheme(theme);
 }
 
 if (themeToggleBtn) {
   themeToggleBtn.addEventListener('click', () => {
-    const isDark =
-      document.documentElement.getAttribute('data-theme') === 'dark' ||
-      (!document.documentElement.getAttribute('data-theme') &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const next = isDark ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
     sessionStorage.setItem('utm_theme_preference', next);
+    applyTheme(next);
     window.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme: next } }));
+  });
+}
+
+// Escuchar cambios automáticos del sistema si el usuario no ha forzado preferencia
+if (window.matchMedia) {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    if (!sessionStorage.getItem('utm_theme_preference')) {
+      const next = e.matches ? 'dark' : 'light';
+      applyTheme(next);
+      window.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme: next } }));
+    }
   });
 }
 

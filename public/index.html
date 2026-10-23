@@ -23,6 +23,19 @@
 
   <!-- Chart.js 4.4 para Analítica -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
+  <!-- Inicialización inmediata de tema para evitar destellos y sincronizar Bootstrap 5.3 -->
+  <script>
+    (function () {
+      try {
+        var saved = sessionStorage.getItem('utm_theme_preference');
+        var isDark = saved === 'dark' || (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var theme = isDark ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.setAttribute('data-bs-theme', theme);
+      } catch (e) {}
+    })();
+  </script>
 </head>
 
 <body>
