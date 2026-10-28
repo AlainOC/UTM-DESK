@@ -11,7 +11,7 @@ export const schemaUsuarios = {
       nombre_completo: { bsonType: 'string', minLength: 1 },
       correo: { bsonType: 'string', pattern: '^.+@.+$' },
       password_hash: { bsonType: 'string', pattern: '^\\$2[aby]\\$\\d{2}\\$[./A-Za-z0-9]{53}$' },
-      nivel_acceso: { enum: ['reportante', 'tecnico', 'coordinador', 'directivo'] },
+      nivel_acceso: { enum: ['reportante', 'tecnico', 'coordinador', 'directivo', 'superadmin'] },
       tipo_reportante: { enum: ['docente', 'estudiante', 'administrativo'] },
       estado: { enum: ['activo', 'inactivo', 'suspendido'] },
       fecha_registro: { bsonType: 'date' },
@@ -22,7 +22,7 @@ export const schemaUsuarios = {
         required: ['tipo_reportante'],
       },
       {
-        properties: { nivel_acceso: { enum: ['tecnico', 'coordinador', 'directivo'] } },
+        properties: { nivel_acceso: { enum: ['tecnico', 'coordinador', 'directivo', 'superadmin'] } },
         not: { required: ['tipo_reportante'] },
       },
     ],

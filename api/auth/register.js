@@ -13,7 +13,7 @@ import { registrarCuentaReportante } from '../../lib/services/usuarioService.js'
 const app = express();
 app.use(express.json());
 
-app.post('/api/auth/register', async (req, res) => {
+app.post(['/api/auth/register', '/api/auth/registro'], async (req, res) => {
   try {
     await connectDB();
     const { nombre_completo, nombre, correo, password, tipo_reportante, tipo } = req.body || {};

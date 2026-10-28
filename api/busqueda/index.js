@@ -15,7 +15,7 @@ app.use(express.json());
 app.get(
   '/api/busqueda',
   requireAuth,
-  requiereRol('tecnico', 'coordinador', 'directivo'),
+  requiereRol('tecnico', 'coordinador', 'directivo', 'superadmin'),
   async (req, res) => {
     try {
       await connectDB();

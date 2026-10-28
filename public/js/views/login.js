@@ -123,6 +123,10 @@ export function renderLoginView(container, onLoginSuccess) {
               <span class="badge-nivel badge-directivo">direct</span>
               <span class="font-mono text-truncate">jorge.herrera</span>
             </button>
+            <button type="button" class="login-account-chip" data-email="lizandro.reyes@utmetropolitana.edu.mx" data-password="lizandro_2026" title="Cargar credenciales de Superadmin">
+              <span class="badge-nivel badge-superadmin">super</span>
+              <span class="font-mono text-truncate">lizandro.reyes</span>
+            </button>
           </div>
         </div>
 
@@ -158,9 +162,10 @@ export function renderLoginView(container, onLoginSuccess) {
   container.querySelectorAll('.login-account-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       const email = chip.getAttribute('data-email');
+      const pass = chip.getAttribute('data-password') || 'UtmDesk#2026';
       if (email && correoEl && pwdEl) {
         correoEl.value = email;
-        pwdEl.value = 'UtmDesk#2026';
+        pwdEl.value = pass;
         clearError();
         submitBtn.focus();
       }
@@ -219,10 +224,12 @@ export function renderLoginView(container, onLoginSuccess) {
           'pedro.kuk@campus.example.edu': { nombre: 'Pedro Kuk', nivel_acceso: 'tecnico', tipo_reportante: null },
           'ana.pech@campus.example.edu': { nombre: 'Ana Pech', nivel_acceso: 'coordinador', tipo_reportante: null },
           'jorge.herrera@campus.example.edu': { nombre: 'Jorge Herrera', nivel_acceso: 'directivo', tipo_reportante: null },
+          'lizandro.reyes@utmetropolitana.edu.mx': { nombre: 'lizandro.reyes', nivel_acceso: 'superadmin', tipo_reportante: null, password: 'lizandro_2026' },
         };
 
         const account = MOCK_ACCOUNTS[correo.toLowerCase()];
-        if (!account || password !== 'UtmDesk#2026') {
+        const expectedPassword = account?.password || 'UtmDesk#2026';
+        if (!account || password !== expectedPassword) {
           showError('Credenciales incorrectas. Revisa correo y contraseña.');
           setLoading(false);
           return;

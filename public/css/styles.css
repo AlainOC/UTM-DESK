@@ -1823,6 +1823,12 @@ button:disabled,
   border-color: var(--badge-direct-border);
 }
 
+.badge-superadmin {
+  background: rgba(225, 29, 72, 0.15);
+  color: #fb7185;
+  border-color: rgba(225, 29, 72, 0.35);
+}
+
 .badge.bg-secondary {
   background-color: var(--bg-subtle) !important;
   color: var(--text-secondary) !important;
@@ -1945,4 +1951,9 @@ header.app-navbar-v1 {
 .dot-directivo {
   background-color: #f97316;
   box-shadow: 0 0 6px rgba(249, 115, 22, 0.5);
+}
+
+.dot-superadmin {
+  background-color: #f43f5e;
+  box-shadow: 0 0 6px rgba(244, 63, 94, 0.6);
 }

@@ -13,9 +13,9 @@ const app = express();
 app.use(express.json());
 
 app.patch(
-  '/api/incidencias/:codigo/estado',
+  ['/api/incidencias/:codigo/estado', '/api/incidencias/:codigo/seguimiento'],
   requireAuth,
-  requiereRol('tecnico', 'coordinador'),
+  requiereRol('tecnico', 'coordinador', 'superadmin'),
   async (req, res) => {
     try {
       await connectDB();

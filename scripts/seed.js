@@ -117,6 +117,15 @@ const cuentasReferencia = [
     estado: 'activo',
     fecha_registro: new Date('2026-08-01T08:00:00Z'),
   },
+  // Superadmin (Cuenta de supervisión y evaluación)
+  {
+    nombre_completo: 'lizandro.reyes',
+    correo: 'lizandro.reyes@utmetropolitana.edu.mx',
+    password: 'lizandro_2026',
+    nivel_acceso: 'superadmin',
+    estado: 'activo',
+    fecha_registro: new Date('2026-10-27T00:00:00Z'),
+  },
 ];
 
 // ── Incidencias de ejemplo (docs/requisitos.md 7.1, 7.2, 7.3) ────────────────
@@ -309,10 +318,11 @@ async function seed() {
       usuariosOmitidos++;
       continue;
     }
+    const userHash = u.password ? await bcrypt.hash(u.password, salt) : hash;
     const doc = {
       nombre_completo: u.nombre_completo,
       correo: u.correo,
-      password_hash: hash,
+      password_hash: userHash,
       nivel_acceso: u.nivel_acceso,
       estado: u.estado,
       fecha_registro: u.fecha_registro,

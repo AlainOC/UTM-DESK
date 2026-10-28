@@ -66,6 +66,7 @@ export async function renderDetalleView(container, codigo) {
     const tecCorreo = typeof inc.tecnico_asignado === 'object' && inc.tecnico_asignado ? inc.tecnico_asignado.correo : null;
     const isAssignedTech = Boolean(userEmail && tecCorreo && userEmail === tecCorreo.toLowerCase());
 
+    const isSuperadmin = userRole === 'superadmin';
     const isCoordinador = userRole === 'coordinador';
     const isTecnico = userRole === 'tecnico';
     const isReportante = userRole === 'reportante';
@@ -73,9 +74,9 @@ export async function renderDetalleView(container, codigo) {
 
     // Permisos de acción operativa según RF-11 a RF-19
     const canAutoasignar = !isCerrada && !hasTecnico && (isTecnico || isCoordinador);
-    const canAsignarCoordinador = !isCerrada && isCoordinador;
-    const canUpdateEstado = !isCerrada && (isCoordinador || isAssignedTech);
-    const canManageTags = !isCerrada && (isCoordinador || isAssignedTech);
+    const canAsignarCoordinador = !isCerrada && (isCoordinador || isSuperadmin);
+    const canUpdateEstado = !isCerrada && (isCoordinador || isSuperadmin || isAssignedTech);
+    const canManageTags = !isCerrada && (isCoordinador || isSuperadmin || isAssignedTech);
     const canUploadEvidence = !isCerrada && ((isReportante && isOwner) || isAssignedTech);
 
     const ttlAviso = inc.fecha_resolucion
@@ -277,7 +278,7 @@ export async function renderDetalleView(container, codigo) {
                     ` : inc.estado === 'en_espera' ? `
                       <option value="en_proceso">En Proceso</option>
                       <option value="resuelta">Resuelta</option>
-                    ` : inc.estado === 'resuelta' && isCoordinador ? `
+                    ` : inc.estado === 'resuelta' && (isCoordinador || isSuperadmin) ? `
                       <option value="cerrada">Cerrar Ticket Definitivamente (RF-15)</option>
                       <option value="en_proceso">Reabrir Incidencia (RF-15)</option>
                     ` : `
@@ -304,7 +305,7 @@ export async function renderDetalleView(container, codigo) {
             ` : `
               <div class="p-3 rounded bg-subtle text-muted" style="font-size:0.85rem;">
                 Estado actual: <strong>${esc(ESTADOS[inc.estado]?.label || inc.estado)}</strong>.
-                <div class="mt-1">${isResuelta ? 'Solo un coordinador puede cerrar o reabrir una incidencia resuelta.' : 'Solo el técnico asignado a este ticket o un coordinador pueden registrar avances de estado.'}</div>
+                <div class="mt-1">${isResuelta ? 'Solo un coordinador o superadministrador puede cerrar o reabrir una incidencia resuelta.' : 'Solo el técnico asignado a este ticket, un coordinador o el superadministrador pueden registrar avances de estado.'}</div>
               </div>
             `}
           </section>

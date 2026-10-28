@@ -16,7 +16,7 @@ app.use(express.json());
 app.post(
   '/api/incidencias/:codigo/tags',
   requireAuth,
-  requiereRol('tecnico', 'coordinador'),
+  requiereRol('tecnico', 'coordinador', 'superadmin'),
   async (req, res) => {
     try {
       await connectDB();
@@ -38,7 +38,7 @@ app.post(
 app.delete(
   '/api/incidencias/:codigo/tags/:tag',
   requireAuth,
-  requiereRol('tecnico', 'coordinador'),
+  requiereRol('tecnico', 'coordinador', 'superadmin'),
   async (req, res) => {
     try {
       await connectDB();

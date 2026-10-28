@@ -16,7 +16,7 @@ app.use(express.json());
 app.patch(
   '/api/incidencias/:codigo/tecnico',
   requireAuth,
-  requiereRol('tecnico', 'coordinador'),
+  requiereRol('tecnico', 'coordinador', 'superadmin'),
   async (req, res) => {
     try {
       await connectDB();
@@ -36,6 +36,16 @@ app.patch(
           const correoTecnico = typeof tecnico_asignado === 'object' ? tecnico_asignado.correo : tecnico_asignado;
           resultado = await asignarTecnicoPorCoordinador(codigo, correoTecnico, req.user);
         }
+      } else if (req.user.nivel_acceso === 'superadmin') {
+        // Superadmin no puede autoasignarse (rechazar autoasignación)
+        if (autoasignar === true || !tecnico_asignado) {
+          return res.status(403).json({ error: 'Acceso denegado. El superadministrador no puede autoasignarse incidencias.' });
+        }
+        const correoTecnico = typeof tecnico_asignado === 'object' ? tecnico_asignado.correo : tecnico_asignado;
+        if (correoTecnico && correoTecnico.toLowerCase() === req.user.correo.toLowerCase()) {
+          return res.status(403).json({ error: 'Acceso denegado. El superadministrador no puede autoasignarse incidencias.' });
+        }
+        resultado = await asignarTecnicoPorCoordinador(codigo, correoTecnico, req.user);
       }
 
       return res.status(200).json(resultado);

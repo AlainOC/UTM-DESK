@@ -61,7 +61,7 @@ export function clearSession() {
 
 /**
  * Verifica si el usuario activo tiene alguno de los roles permitidos.
- * @param {...('reportante'|'tecnico'|'coordinador'|'directivo')} roles
+ * @param {...('reportante'|'tecnico'|'coordinador'|'directivo'|'superadmin')} roles
  */
 export function tieneRol(...roles) {
   const usuario = getUsuario();

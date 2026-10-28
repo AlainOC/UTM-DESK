@@ -15,7 +15,7 @@ app.use(express.json());
 app.get(
   '/api/analitica/tags',
   requireAuth,
-  requiereRol('directivo'),
+  requiereRol('directivo', 'superadmin'),
   async (req, res) => {
     try {
       await connectDB();

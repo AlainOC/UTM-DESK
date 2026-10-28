@@ -98,16 +98,16 @@ function filterNavByRole() {
     navRegistro.style.display = rol === 'reportante' ? 'inline-flex' : 'none';
   }
 
-  // Búsqueda: técnico, coordinador, directivo (RF-20)
+  // Búsqueda: técnico, coordinador, directivo, superadmin (RF-20)
   if (navBusqueda) {
-    navBusqueda.style.display = (rol === 'tecnico' || rol === 'coordinador' || rol === 'directivo')
+    navBusqueda.style.display = (rol === 'tecnico' || rol === 'coordinador' || rol === 'directivo' || rol === 'superadmin')
       ? 'inline-flex'
       : 'none';
   }
 
-  // Analítica: SOLO directivo (RF-21, RF-22)
+  // Analítica: directivo y superadmin (RF-21, RF-22)
   if (navAnalitica) {
-    navAnalitica.style.display = rol === 'directivo' ? 'inline-flex' : 'none';
+    navAnalitica.style.display = (rol === 'directivo' || rol === 'superadmin') ? 'inline-flex' : 'none';
   }
 }
 
@@ -156,6 +156,12 @@ function renderUserChip() {
       cls: 'badge-directivo',
       dotCls: 'dot-directivo',
       scope: 'CONSOLA DIRECTIVA // ANALÍTICA CAMPUS'
+    },
+    superadmin: {
+      label: 'Superadmin',
+      cls: 'badge-superadmin',
+      dotCls: 'dot-superadmin',
+      scope: 'SUPERVISIÓN Y EVALUACIÓN // AUDITORÍA & CONTROL'
     },
   };
   const meta = nivelMeta[usuario.nivel_acceso] ?? {
@@ -268,13 +274,13 @@ async function handleRouting() {
     await renderDetalleView(viewContainer, codigo);
 
   } else if (hash.startsWith('#/busqueda')) {
-    // Técnico, coordinador y directivo (RF-20)
-    if (!tieneRol('tecnico', 'coordinador', 'directivo')) {
+    // Técnico, coordinador, directivo y superadmin (RF-20)
+    if (!tieneRol('tecnico', 'coordinador', 'directivo', 'superadmin')) {
       viewContainer.innerHTML = `
         <div class="state-container state-error" style="margin-top:3rem;">
           <div class="state-icon" aria-hidden="true">🔒</div>
           <h2 class="state-title">Acceso restringido</h2>
-          <p class="state-desc">La búsqueda operativa está reservada para personal técnico, coordinación y directivos.</p>
+          <p class="state-desc">La búsqueda operativa está reservada para personal técnico, coordinación, directivos y supervisión.</p>
           <a href="#/tablero" class="btn-custom-secondary">← Volver al tablero</a>
         </div>`;
       return;
@@ -282,13 +288,13 @@ async function handleRouting() {
     await renderBusquedaView(viewContainer);
 
   } else if (hash === '#/analitica') {
-    // SOLO directivo (RF-21, RF-22)
-    if (!tieneRol('directivo')) {
+    // Directivo y superadmin (RF-21, RF-22)
+    if (!tieneRol('directivo', 'superadmin')) {
       viewContainer.innerHTML = `
         <div class="state-container state-error" style="margin-top:3rem;">
           <div class="state-icon" aria-hidden="true">🔒</div>
           <h2 class="state-title">Acceso restringido</h2>
-          <p class="state-desc">La consola de analítica y métricas institucionales es de acceso exclusivo para <strong>directivos</strong>.</p>
+          <p class="state-desc">La consola de analítica y métricas institucionales es de acceso exclusivo para <strong>directivos</strong> y <strong>supervisión y evaluación</strong>.</p>
           <a href="#/tablero" class="btn-custom-secondary">← Volver al tablero</a>
         </div>`;
       return;

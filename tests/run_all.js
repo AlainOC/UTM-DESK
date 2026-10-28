@@ -23,6 +23,7 @@ const suites = [
   { name: 'RNF-10: Contraseñas (8 chars, bcrypt, sin hashes)', file: 'test_rnf10_contrasenas.js' },
   { name: 'RNF-14: Fechas BSON Date y Formato Local', file: 'test_rnf14_fechas.js' },
   { name: 'RNF-15: Connection Pooling y Vercel Serverless', file: 'test_rnf15_serverless.js' },
+  { name: 'Rol Superadmin: Supervisión y Evaluación', file: 'test_superadmin.js' },
 ];
 
 async function runSuite(suite) {
