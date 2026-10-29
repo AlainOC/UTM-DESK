@@ -77,7 +77,7 @@ export async function renderDetalleView(container, codigo) {
     const canAsignarCoordinador = !isCerrada && (isCoordinador || isSuperadmin);
     const canUpdateEstado = !isCerrada && (isCoordinador || isSuperadmin || isAssignedTech);
     const canManageTags = !isCerrada && (isCoordinador || isSuperadmin || isAssignedTech);
-    const canUploadEvidence = !isCerrada && ((isReportante && isOwner) || isAssignedTech);
+    const canUploadEvidence = !isCerrada && ((isReportante && isOwner) || isAssignedTech || isSuperadmin);
 
     const ttlAviso = inc.fecha_resolucion
       ? `<div class="ttl-notice mb-4" role="status">

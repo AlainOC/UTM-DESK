@@ -21,7 +21,7 @@ app.use('/api/evidencias/upload', express.raw({ type: '*/*', limit: '12mb' }));
 app.post(
   '/api/evidencias/upload',
   requireAuth,
-  requiereRol('reportante', 'tecnico'),
+  requiereRol('reportante', 'tecnico', 'superadmin'),
   async (req, res) => {
     try {
       await connectDB();
@@ -42,6 +42,10 @@ app.post(
         if (inc.tecnico_asignado?.correo?.toLowerCase() !== req.user.correo.toLowerCase()) {
           return res.status(403).json({ error: 'Acceso denegado. Solo puedes subir evidencias a tus incidencias asignadas.' });
         }
+      } else if (req.user.nivel_acceso === 'superadmin') {
+        // Superadmin puede subir evidencias a cualquier incidencia
+      } else {
+        return res.status(403).json({ error: 'Acceso denegado. Rol no autorizado para subir evidencias.' });
       }
 
       // Validar extensión permitida (JPG, PNG, PDF)

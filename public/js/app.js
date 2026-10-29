@@ -93,9 +93,9 @@ function filterNavByRole() {
   // Tablero: todos los roles
   if (navTablero) navTablero.style.display = 'inline-flex';
 
-  // Registrar Incidencia: SOLO reportante (RF-04 a RF-08)
+  // Registrar Incidencia: reportante y superadmin (RF-04 a RF-08)
   if (navRegistro) {
-    navRegistro.style.display = rol === 'reportante' ? 'inline-flex' : 'none';
+    navRegistro.style.display = (rol === 'reportante' || rol === 'superadmin') ? 'inline-flex' : 'none';
   }
 
   // Búsqueda: técnico, coordinador, directivo, superadmin (RF-20)
@@ -256,13 +256,13 @@ async function handleRouting() {
     await renderTableroView(viewContainer);
 
   } else if (hash === '#/registro') {
-    // Solo reportante puede registrar incidencias (CU-01 / RF-04 a RF-08)
-    if (!tieneRol('reportante')) {
+    // Reportante o superadmin pueden registrar incidencias (CU-01 / RF-04 a RF-08)
+    if (!tieneRol('reportante', 'superadmin')) {
       viewContainer.innerHTML = `
         <div class="state-container state-error" style="margin-top:3rem;">
           <div class="state-icon" aria-hidden="true">🔒</div>
           <h2 class="state-title">Acceso restringido</h2>
-          <p class="state-desc">El levantamiento de incidencias es exclusivo para usuarios con rol <strong>reportante</strong>.</p>
+          <p class="state-desc">El levantamiento de incidencias está reservado para usuarios <strong>reportantes</strong> y <strong>superadministradores</strong>.</p>
           <a href="#/tablero" class="btn-custom-secondary">← Volver al tablero</a>
         </div>`;
       return;

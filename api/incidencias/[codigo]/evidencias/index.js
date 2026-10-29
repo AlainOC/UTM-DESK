@@ -1,7 +1,7 @@
 /**
  * POST /api/incidencias/:codigo/evidencias
  * RF-16: Registra metadatos de evidencia ($push en evidencias_adjuntas).
- * Nivel requerido: reportante (a las suyas) o técnico (a las asignadas a él).
+ * Nivel requerido: reportante (a las suyas), técnico (a las asignadas a él) o superadmin.
  * Body: { nombre_archivo, tipo_mime, peso_kb, url_storage }
  */
 import 'dotenv/config';
@@ -16,7 +16,7 @@ app.use(express.json());
 app.post(
   '/api/incidencias/:codigo/evidencias',
   requireAuth,
-  requiereRol('reportante', 'tecnico'),
+  requiereRol('reportante', 'tecnico', 'superadmin'),
   async (req, res) => {
     try {
       await connectDB();

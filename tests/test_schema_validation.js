@@ -52,7 +52,7 @@ export const schemaIncidencias = {
         required: ['nombre', 'rol', 'correo'],
         properties: {
           nombre: { bsonType: 'string' },
-          rol: { enum: ['docente', 'estudiante', 'administrativo'] },
+          rol: { enum: ['docente', 'estudiante', 'administrativo', 'superadmin'] },
           correo: { bsonType: 'string', pattern: '^.+@.+$' },
         },
       },

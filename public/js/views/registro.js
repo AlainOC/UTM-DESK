@@ -40,7 +40,7 @@ export async function renderRegistroView(container) {
             <div class="p-3 rounded bg-subtle border">
               <div class="d-flex align-items-center justify-content-between mb-1">
                 <span class="fw-bold fs-6">${esc(usuarioActual?.nombre_completo || usuarioActual?.nombre || 'Reportante')}</span>
-                <span class="badge-nivel badge-reportante">${esc(usuarioActual?.tipo_reportante || 'Reportante')}</span>
+                <span class="badge-nivel ${usuarioActual?.nivel_acceso === 'superadmin' ? 'badge-superadmin' : 'badge-reportante'}">${esc(usuarioActual?.tipo_reportante || (usuarioActual?.nivel_acceso === 'superadmin' ? 'Superadmin' : 'Reportante'))}</span>
               </div>
               <div class="font-mono text-muted" style="font-size:0.8rem;">
                 ${esc(usuarioActual?.correo || '')}

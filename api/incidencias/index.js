@@ -27,8 +27,8 @@ app.get('/api/incidencias', requireAuth, async (req, res) => {
 });
 
 // ── POST /api/incidencias (RF-04 a RF-08) ─────────────────────────────────
-// Solo el reportante puede registrar (los demás roles reciben 403)
-app.post('/api/incidencias', requireAuth, requiereRol('reportante'), async (req, res) => {
+// Reportante o superadmin pueden registrar incidencias (los demás roles reciben 403)
+app.post('/api/incidencias', requireAuth, requiereRol('reportante', 'superadmin'), async (req, res) => {
   try {
     await connectDB();
     const nueva = await crearIncidencia(req.body, req.user);

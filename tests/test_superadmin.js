@@ -2,7 +2,7 @@
  * UTM Desk — Test de Rol Superadmin (Supervisión y Evaluación)
  * Verifica que el rol:
  * 1. Pueda iniciar sesión con sus credenciales y reciba JWT con nivel_acceso: 'superadmin'.
- * 2. NO pueda registrar incidencias (403 Forbidden).
+ * 2. PUEDA registrar incidencias (201 Created).
  * 3. NO pueda autoasignarse incidencias (403 Forbidden).
  * 4. PUEDA consultar la lista completa de incidencias y detalles.
  * 5. PUEDA buscar incidencias por texto (RF-20).
@@ -10,6 +10,7 @@
  * 7. PUEDA asignar técnicos a incidencias como coordinador.
  * 8. PUEDA gestionar etiquetas (tags) como coordinador.
  * 9. PUEDA cambiar estados, cerrar tickets y reabrirlos como coordinador.
+ * 10. PUEDA registrar/subir evidencias a incidencias (RF-16).
  */
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
@@ -29,7 +30,7 @@ function sleep(ms) {
 }
 
 async function request(path, options = {}) {
-  const url = `http://localhost:${PORT}${path}`;
+  const url = `http://127.0.0.1:${PORT}${path}`;
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   const resp = await fetch(url, {
     method: options.method || 'GET',
@@ -143,9 +144,9 @@ async function testSuperadmin() {
   });
   serverProcess.stderr.on('data', (d) => console.error('[Server Stderr]:', d.toString()));
 
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 40; i++) {
     try {
-      await fetch(`http://localhost:${PORT}/api/incidencias`);
+      await fetch(`http://127.0.0.1:${PORT}/api/incidencias`);
       break;
     } catch {
       await sleep(250);
@@ -185,22 +186,29 @@ async function testSuperadmin() {
     const token = loginRes.data?.token;
     const authHeader = { Authorization: `Bearer ${token}` };
 
-    // 2. Intento de registrar incidencia -> DEBE SER RECHAZADO (403)
+    // 2. Registro de incidencia por superadmin -> DEBE SER PERMITIDO (201)
     const crearRes = await request('/api/incidencias', {
       method: 'POST',
       headers: authHeader,
       body: {
-        titulo: 'Intento de registro por superadmin',
-        descripcion: 'No debe permitirse registrar incidencias',
+        titulo: 'Registro legítimo por superadmin',
+        descripcion: 'Superadmin tiene permisos para levantar incidencias en campus',
         categoria: 'computo_redes',
-        prioridad: 'baja',
-        ubicacion: { edificio: 'Edificio A', espacio: 'Lab' },
-        detalle_especifico: { tipo_falla: 'test', equipo: 'test' },
+        prioridad: 'media',
+        ubicacion: { edificio: 'Edificio A', espacio: 'Lab 1' },
+        detalle_especifico: {
+          tipo_falla: 'falla_red',
+          equipo: 'Switch Core',
+          direccion_ip: '10.10.4.1',
+          vlan: 10,
+          puerto_uplink: 'Gi0/1',
+          equipos_afectados: 12,
+        },
       },
     });
     assertTest(
-      '3. Rechazo al registrar incidencia (excepto registrar)',
-      crearRes.status === 403,
+      '3. Registro de incidencia por superadmin exitoso',
+      crearRes.status === 201 && Boolean(crearRes.data?.codigo),
       `Status: ${crearRes.status}`
     );
 
@@ -316,6 +324,24 @@ async function testSuperadmin() {
       '13. Ranking de tags (RF-22 como directivo)',
       analiticaTagsRes.status === 200 && Array.isArray(analiticaTagsRes.data),
       `Status: ${analiticaTagsRes.status}`
+    );
+
+    // 11. Subir evidencias a una incidencia -> DEBE PERMITIRSE (200)
+    const evidenciaRes = await request('/api/incidencias/INC-2026-0001/evidencias', {
+      method: 'POST',
+      headers: authHeader,
+      body: {
+        nombre_archivo: 'evidencia_supervision.jpg',
+        tipo_mime: 'image/jpeg',
+        peso_kb: 120,
+        url_storage: 'https://store.blob/evidencia_supervision.jpg',
+      },
+    });
+    assertTest(
+      '14. Registrar evidencias adjuntas (RF-16 como superadmin)',
+      evidenciaRes.status === 200 &&
+        evidenciaRes.data?.evidencias_adjuntas?.some((e) => e.nombre_archivo === 'evidencia_supervision.jpg'),
+      `Status: ${evidenciaRes.status}`
     );
   } finally {
     if (serverProcess) serverProcess.kill();

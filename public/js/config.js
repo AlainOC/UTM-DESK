@@ -105,7 +105,8 @@ export const ESTADOS = {
 export const ROLES_REPORTANTE = {
   docente: "Docente",
   estudiante: "Estudiante",
-  administrativo: "Personal Administrativo"
+  administrativo: "Personal Administrativo",
+  superadmin: "Supervisión y Evaluación"
 };
 
 // Niveles de riesgo para infraestructura
